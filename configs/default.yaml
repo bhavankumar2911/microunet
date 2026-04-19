@@ -14,7 +14,6 @@ training:
   weight_decay: 1e-4
   batch_size: 16
   epochs: 50
-  seed: 42
   dataset: BAGLS
   image_size: 256
   hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
