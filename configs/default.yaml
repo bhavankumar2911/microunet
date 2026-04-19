@@ -16,6 +16,6 @@ training:
   epochs: 5
   dataset: BAGLS
   image_size: 256
-  max_samples: 5000    # null means use full dataset, set a number for faster iteration
+  max_samples: 1000    # null means use full dataset, set a number for faster iteration
   hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
   notes: "baseline"
