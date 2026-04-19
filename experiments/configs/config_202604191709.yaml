@@ -1,0 +1,21 @@
+architecture:
+  activation: relu
+  bottleneck_channels: 32
+  dropout_probability: 0.0
+  encoder_channels: [8, 16]
+  group_norm_num_groups: 8
+  normalization: batch_norm
+  upsampling_mode: transposed_conv
+  use_attention_gates: false
+  use_residual_connections: false
+training:
+  batch_size: 32
+  dataset: BAGLS
+  epochs: 5
+  hypothesis: Baseline micro U-Net with BatchNorm, no attention, no residual
+  image_size: 256
+  learning_rate: 0.001
+  max_samples: 1000
+  notes: baseline
+  seed: 44
+  weight_decay: 0.0001
