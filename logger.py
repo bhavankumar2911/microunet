@@ -1,5 +1,5 @@
 import csv
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 import mlflow
@@ -38,7 +38,6 @@ class ExperimentLogger:
         self.architecture = full_config["architecture"]
         self.training     = full_config["training"]
         self.run_id       = run_id
-
         self.parent_run_id = None
 
         EXPERIMENTS_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +45,8 @@ class ExperimentLogger:
         self._initialize_csv_if_missing()
 
     def _initialize_csv_if_missing(self):
-        if not EXPERIMENTS_CSV_PATH.exists():
+        # Always write headers — even if file exists but is empty
+        if not EXPERIMENTS_CSV_PATH.exists() or EXPERIMENTS_CSV_PATH.stat().st_size == 0:
             with open(EXPERIMENTS_CSV_PATH, "w", newline="") as csv_file:
                 csv.DictWriter(csv_file, fieldnames=CSV_COLUMN_HEADERS).writeheader()
 
@@ -73,39 +73,43 @@ class ExperimentLogger:
             "epochs":                   self.training["epochs"],
             "hypothesis":               self.training["hypothesis"],
         })
+        # End the run here — child runs will resume it with nested=True
+        mlflow.end_run()
 
     def start_seed_run(self, seed):
-        """Opens a child MLflow run for a single seed — nested inside the parent."""
+        """Opens a child MLflow run for a single seed — nested under the parent run."""
+        mlflow.start_run(run_id=self.parent_run_id)
         mlflow.start_run(run_name=f"{self.run_id}_seed{seed}", nested=True)
         mlflow.log_param("seed", seed)
 
     def log_epoch_metrics(self, epoch, training_loss, validation_loss, validation_dice):
         mlflow.log_metrics({
-            "training_loss":   training_loss,
-            "validation_loss": validation_loss,
-            "validation_dice": validation_dice
+            "loss_train": training_loss,
+            "loss_val":   validation_loss,
+            "dice_val":   validation_dice,
         }, step=epoch)
 
     def finish_seed_run(self, best_val_dice, test_dice):
-        """Closes the child run for one seed."""
+        """Closes the child run for one seed, then closes the resumed parent run."""
         mlflow.log_metric("best_val_dice", best_val_dice)
         mlflow.log_metric("test_dice", test_dice)
-        mlflow.end_run()
+        mlflow.end_run()  # ends child run
+        mlflow.end_run()  # ends resumed parent run
 
     def finish_experiment(self, all_val_dice_scores, all_test_dice_scores, seeds_used):
-        """Closes the parent run and logs mean ± std across all seeds."""
+        """Resumes the parent run, logs mean ± std across all seeds, then closes it."""
         val_mean  = float(np.mean(all_val_dice_scores))
         val_std   = float(np.std(all_val_dice_scores))
         test_mean = float(np.mean(all_test_dice_scores))
         test_std  = float(np.std(all_test_dice_scores))
 
-        mlflow.log_metrics({
-            "val_dice_mean":  val_mean,
-            "val_dice_std":   val_std,
-            "test_dice_mean": test_mean,
-            "test_dice_std":  test_std,
-        })
-        mlflow.end_run()
+        with mlflow.start_run(run_id=self.parent_run_id):
+            mlflow.log_metrics({
+                "val_dice_mean":  val_mean,
+                "val_dice_std":   val_std,
+                "test_dice_mean": test_mean,
+                "test_dice_std":  test_std,
+            })
 
         self._save_config_yaml()
         self._append_row_to_csv(val_mean, val_std, test_mean, test_std, seeds_used)
@@ -115,15 +119,29 @@ class ExperimentLogger:
         print(f"Test Dice: {test_mean:.4f} ± {test_std:.4f}")
 
     def _save_config_yaml(self):
+        """
+        Saves a frozen snapshot of the config in the same block style as default.yaml.
+        Uses a custom representer so lists like [8, 16] stay on one line (flow style)
+        while all other fields use the readable block style.
+        """
         config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
+
+        # Custom representer: lists → flow style [8, 16], everything else → block style
+        class BlockWithFlowLists(yaml.Dumper):
+            pass
+
+        def represent_list_as_flow(dumper, data):
+            return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
+
+        BlockWithFlowLists.add_representer(list, represent_list_as_flow)
+
         with open(config_path, "w") as yaml_file:
-            # Use default_flow_style=None so arrays stay on one line: [8, 16]
-            yaml.dump(self.full_config, yaml_file, default_flow_style=None)
+            yaml.dump(self.full_config, yaml_file, Dumper=BlockWithFlowLists, default_flow_style=False)
 
     def _append_row_to_csv(self, val_mean, val_std, test_mean, test_std, seeds_used):
         row = {
             "run_id":                   self.run_id,
-            "date":                     str(date.today()),
+            "date":                     datetime.now().strftime("%Y-%m-%d"),
             "dataset":                  self.training["dataset"],
             "seeds_used":               str(seeds_used),
             "max_samples":              self.training.get("max_samples", "full"),
@@ -149,10 +167,24 @@ class ExperimentLogger:
 
 
 def generate_next_run_id():
-    if not EXPERIMENTS_CSV_PATH.exists():
-        return "001"
+    """Generates a run ID in yyyyMMddHHmm format with a counter suffix if needed."""
+    base_id = datetime.now().strftime("%Y%m%d%H%M")
+
+    if not EXPERIMENTS_CSV_PATH.exists() or EXPERIMENTS_CSV_PATH.stat().st_size == 0:
+        return base_id
+
     with open(EXPERIMENTS_CSV_PATH, "r") as csv_file:
         rows = list(csv.DictReader(csv_file))
+
     if not rows:
-        return "001"
-    return str(int(rows[-1]["run_id"]) + 1).zfill(3)
+        return base_id
+
+    # If a run with the same timestamp already exists, append a counter
+    existing_ids = [row["run_id"] for row in rows]
+    if base_id not in existing_ids:
+        return base_id
+
+    counter = 2
+    while f"{base_id}_{counter}" in existing_ids:
+        counter += 1
+    return f"{base_id}_{counter}"
