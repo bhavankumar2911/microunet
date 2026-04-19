@@ -15,10 +15,10 @@ import numpy as np
 import torch
 import yaml
 
-from dataset import create_bagls_dataloaders
+from dataset import create_train_val_dataloaders, create_test_dataloader
 from logger import ExperimentLogger, generate_next_run_id
 from model import build_model
-from train import train_model
+from train import train_model, evaluate_on_test_set
 
 
 def load_config(config_file_path):
@@ -62,8 +62,15 @@ def main():
     print(f"Starting run_id={run_id}")
 
     # Dataset uses training config for image_size, batch_size, seed
-    training_dataloader, validation_dataloader = create_bagls_dataloaders(
-        bagls_root_directory=arguments.data_directory,
+    # Training and validation come from the training folder — used for learning and tuning
+    training_dataloader, validation_dataloader = create_train_val_dataloaders(
+        root_directory=arguments.data_directory,
+        training_config=TRAINING_CONFIG
+    )
+
+    # Test set loaded separately — touched exactly once after training is done
+    test_dataloader = create_test_dataloader(
+        root_directory=arguments.data_directory,
         training_config=TRAINING_CONFIG
     )
 
@@ -83,7 +90,10 @@ def main():
         mlflow_logger=experiment_logger
     )
 
-    experiment_logger.finish_run(best_dice_score)
+    # One-shot final evaluation — never influences any decisions, just honest reporting
+    test_dice_score = evaluate_on_test_set(model, test_dataloader, device)
+
+    experiment_logger.finish_run(best_dice_score, test_dice_score)
 
 
 if __name__ == "__main__":

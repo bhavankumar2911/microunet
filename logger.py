@@ -14,7 +14,7 @@ CSV_COLUMN_HEADERS = [
     "encoder_channels", "bottleneck_channels", "normalization",
     "use_residual_connections", "use_attention_gates", "upsampling_mode",
     "learning_rate", "weight_decay", "batch_size", "epochs",
-    "best_dice_score", "hypothesis", "notes"
+    "best_val_dice_score", "test_dice_score", "hypothesis", "notes"
 ]
 
 
@@ -76,12 +76,13 @@ class ExperimentLogger:
             "validation_dice":  validation_dice
         }, step=epoch)
 
-    def finish_run(self, best_dice_score):
-        mlflow.log_metric("best_dice_score", best_dice_score)
+    def finish_run(self, best_val_dice_score, test_dice_score):
+        mlflow.log_metric("best_val_dice_score", best_val_dice_score)
+        mlflow.log_metric("test_dice_score", test_dice_score)
         mlflow.end_run()
         self._save_config_yaml()
-        self._append_row_to_csv(best_dice_score)
-        print(f"\nLogged: run_id={self.run_id} | best_dice={best_dice_score:.4f}")
+        self._append_row_to_csv(best_val_dice_score, test_dice_score)
+        print(f"\nLogged: run_id={self.run_id} | best_val_dice={best_val_dice_score:.4f} | test_dice={test_dice_score:.4f}")
 
     def _save_config_yaml(self):
         # Frozen snapshot — both architecture and training blocks saved together
@@ -89,7 +90,7 @@ class ExperimentLogger:
         with open(EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml", "w") as yaml_file:
             yaml.dump(self.full_config, yaml_file, default_flow_style=False)
 
-    def _append_row_to_csv(self, best_dice_score):
+    def _append_row_to_csv(self, best_val_dice_score, test_dice_score):
         row = {
             "run_id":                   self.run_id,
             "date":                     str(date.today()),
@@ -105,7 +106,8 @@ class ExperimentLogger:
             "weight_decay":             self.training["weight_decay"],
             "batch_size":               self.training["batch_size"],
             "epochs":                   self.training["epochs"],
-            "best_dice_score":          round(best_dice_score, 4),
+            "best_val_dice_score":      round(best_val_dice_score, 4),
+            "test_dice_score":          round(test_dice_score, 4),
             "hypothesis":               self.training["hypothesis"],
             "notes":                    self.training.get("notes", ""),
         }

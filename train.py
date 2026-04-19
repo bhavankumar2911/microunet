@@ -76,6 +76,18 @@ def run_validation_epoch(model, validation_dataloader, device):
     return total_loss / len(validation_dataloader), total_dice_score / len(validation_dataloader)
 
 
+def evaluate_on_test_set(model, test_dataloader, device):
+    """
+    One-shot final evaluation on the held-out test set.
+    Called once after training is fully complete.
+    Never used to make any decisions about the model or hyperparameters —
+    only to report the final honest number.
+    """
+    _, test_dice = run_validation_epoch(model, test_dataloader, device)
+    print(f"Final Test Dice: {test_dice:.4f}")
+    return test_dice
+
+
 def train_model(model, training_dataloader, validation_dataloader, training_config, device, mlflow_logger=None):
     # All hyperparameters come from the training block of the yaml — nothing hardcoded
     optimizer = torch.optim.Adam(
