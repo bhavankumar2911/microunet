@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import yaml
 
 
@@ -10,28 +11,35 @@ EXPERIMENTS_CSV_PATH          = Path("experiments/experiments.csv")
 EXPERIMENTS_CONFIGS_DIRECTORY = Path("experiments/configs")
 
 CSV_COLUMN_HEADERS = [
-    "run_id", "date", "dataset", "seed",
+    "run_id", "date", "dataset", "seeds_used", "max_samples",
     "encoder_channels", "bottleneck_channels", "normalization",
     "use_residual_connections", "use_attention_gates", "upsampling_mode",
     "learning_rate", "weight_decay", "batch_size", "epochs",
-    "best_val_dice_score", "test_dice_score", "hypothesis", "notes"
+    "val_dice_mean", "val_dice_std",
+    "test_dice_mean", "test_dice_std",
+    "hypothesis", "notes"
 ]
 
 
 class ExperimentLogger:
     """
-    Ties three logging outputs together under one run_id:
-    - MLflow:           per-epoch metrics + visual dashboard for comparing runs
-    - experiments.csv:  one row per run — quick tabular comparison across all experiments
-    - config_XXX.yaml:  frozen snapshot of the exact config used — guarantees reproducibility
-                        both architecture and training blocks are saved together
+    One MLflow run and one CSV row per experiment (across all seeds).
+    Per-seed metrics are logged as child runs inside the parent MLflow run.
+    The CSV row and MLflow parent run report mean ± std across all seeds.
+
+    - MLflow parent run:  mean ± std metrics + config params
+    - MLflow child runs:  per-seed epoch curves for detailed inspection
+    - experiments.csv:    one row per experiment — mean ± std for reporting
+    - config_XXX.yaml:    frozen snapshot of the exact config used
     """
 
     def __init__(self, full_config, run_id):
-        self.full_config      = full_config
-        self.architecture     = full_config["architecture"]
-        self.training         = full_config["training"]
-        self.run_id           = run_id
+        self.full_config  = full_config
+        self.architecture = full_config["architecture"]
+        self.training     = full_config["training"]
+        self.run_id       = run_id
+
+        self.parent_run_id = None
 
         EXPERIMENTS_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
         EXPERIMENTS_CONFIGS_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -42,11 +50,12 @@ class ExperimentLogger:
             with open(EXPERIMENTS_CSV_PATH, "w", newline="") as csv_file:
                 csv.DictWriter(csv_file, fieldnames=CSV_COLUMN_HEADERS).writeheader()
 
-    def start_mlflow_run(self):
+    def start_experiment(self):
+        """Opens the parent MLflow run that groups all seeds together."""
         mlflow.set_experiment("microunet")
-        mlflow.start_run(run_name=self.run_id)
+        parent_run = mlflow.start_run(run_name=self.run_id)
+        self.parent_run_id = parent_run.info.run_id
 
-        # Log architecture block — captures exact model structure for this run
         mlflow.log_params({
             "encoder_channels":         str(self.architecture["encoder_channels"]),
             "bottleneck_channels":      self.architecture["bottleneck_channels"],
@@ -56,46 +65,68 @@ class ExperimentLogger:
             "use_residual_connections": self.architecture["use_residual_connections"],
             "use_attention_gates":      self.architecture["use_attention_gates"],
             "dropout_probability":      self.architecture["dropout_probability"],
+            "dataset":                  self.training["dataset"],
+            "max_samples":              self.training.get("max_samples", "full"),
+            "learning_rate":            self.training["learning_rate"],
+            "weight_decay":             self.training["weight_decay"],
+            "batch_size":               self.training["batch_size"],
+            "epochs":                   self.training["epochs"],
+            "hypothesis":               self.training["hypothesis"],
         })
 
-        # Log training block — captures all hyperparameters for this run
-        mlflow.log_params({
-            "dataset":        self.training["dataset"],
-            "seed":           self.training["seed"],
-            "learning_rate":  self.training["learning_rate"],
-            "weight_decay":   self.training["weight_decay"],
-            "batch_size":     self.training["batch_size"],
-            "epochs":         self.training["epochs"],
-            "hypothesis":     self.training["hypothesis"],
-        })
+    def start_seed_run(self, seed):
+        """Opens a child MLflow run for a single seed — nested inside the parent."""
+        mlflow.start_run(run_name=f"{self.run_id}_seed{seed}", nested=True)
+        mlflow.log_param("seed", seed)
 
     def log_epoch_metrics(self, epoch, training_loss, validation_loss, validation_dice):
         mlflow.log_metrics({
-            "training_loss":    training_loss,
-            "validation_loss":  validation_loss,
-            "validation_dice":  validation_dice
+            "training_loss":   training_loss,
+            "validation_loss": validation_loss,
+            "validation_dice": validation_dice
         }, step=epoch)
 
-    def finish_run(self, best_val_dice_score, test_dice_score):
-        mlflow.log_metric("best_val_dice_score", best_val_dice_score)
-        mlflow.log_metric("test_dice_score", test_dice_score)
+    def finish_seed_run(self, best_val_dice, test_dice):
+        """Closes the child run for one seed."""
+        mlflow.log_metric("best_val_dice", best_val_dice)
+        mlflow.log_metric("test_dice", test_dice)
         mlflow.end_run()
+
+    def finish_experiment(self, all_val_dice_scores, all_test_dice_scores, seeds_used):
+        """Closes the parent run and logs mean ± std across all seeds."""
+        val_mean  = float(np.mean(all_val_dice_scores))
+        val_std   = float(np.std(all_val_dice_scores))
+        test_mean = float(np.mean(all_test_dice_scores))
+        test_std  = float(np.std(all_test_dice_scores))
+
+        mlflow.log_metrics({
+            "val_dice_mean":  val_mean,
+            "val_dice_std":   val_std,
+            "test_dice_mean": test_mean,
+            "test_dice_std":  test_std,
+        })
+        mlflow.end_run()
+
         self._save_config_yaml()
-        self._append_row_to_csv(best_val_dice_score, test_dice_score)
-        print(f"\nLogged: run_id={self.run_id} | best_val_dice={best_val_dice_score:.4f} | test_dice={test_dice_score:.4f}")
+        self._append_row_to_csv(val_mean, val_std, test_mean, test_std, seeds_used)
+
+        print(f"\nExperiment {self.run_id} complete")
+        print(f"Val  Dice: {val_mean:.4f} ± {val_std:.4f}")
+        print(f"Test Dice: {test_mean:.4f} ± {test_std:.4f}")
 
     def _save_config_yaml(self):
-        # Frozen snapshot — both architecture and training blocks saved together
-        # Never edited after the run — used to reproduce exact results later
-        with open(EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml", "w") as yaml_file:
-            yaml.dump(self.full_config, yaml_file, default_flow_style=False)
+        config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
+        with open(config_path, "w") as yaml_file:
+            # Use default_flow_style=None so arrays stay on one line: [8, 16]
+            yaml.dump(self.full_config, yaml_file, default_flow_style=None)
 
-    def _append_row_to_csv(self, best_val_dice_score, test_dice_score):
+    def _append_row_to_csv(self, val_mean, val_std, test_mean, test_std, seeds_used):
         row = {
             "run_id":                   self.run_id,
             "date":                     str(date.today()),
             "dataset":                  self.training["dataset"],
-            "seed":                     self.training["seed"],
+            "seeds_used":               str(seeds_used),
+            "max_samples":              self.training.get("max_samples", "full"),
             "encoder_channels":         str(self.architecture["encoder_channels"]),
             "bottleneck_channels":      self.architecture["bottleneck_channels"],
             "normalization":            self.architecture["normalization"],
@@ -106,8 +137,10 @@ class ExperimentLogger:
             "weight_decay":             self.training["weight_decay"],
             "batch_size":               self.training["batch_size"],
             "epochs":                   self.training["epochs"],
-            "best_val_dice_score":      round(best_val_dice_score, 4),
-            "test_dice_score":          round(test_dice_score, 4),
+            "val_dice_mean":            round(val_mean, 4),
+            "val_dice_std":             round(val_std, 4),
+            "test_dice_mean":           round(test_mean, 4),
+            "test_dice_std":            round(test_std, 4),
             "hypothesis":               self.training["hypothesis"],
             "notes":                    self.training.get("notes", ""),
         }

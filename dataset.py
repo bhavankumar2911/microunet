@@ -141,11 +141,21 @@ def create_train_val_dataloaders(root_directory, training_config, validation_spl
     """
     Splits the training folder into train and validation sets.
     Validation is used during training to tune hyperparameters and pick the best config.
+    If max_samples is set in config, the dataset is subsampled before splitting —
+    both train and val shrink proportionally so the ratio stays the same.
     """
     dataset_name  = training_config["dataset"]
     dataset_class = _get_dataset_class(dataset_name)
 
-    full_dataset     = dataset_class(root_directory, training_config["image_size"], split="training")
+    full_dataset = dataset_class(root_directory, training_config["image_size"], split="training")
+
+    # Subsample if max_samples is set — applied before the split so ratio is preserved
+    max_samples = training_config.get("max_samples", None)
+    if max_samples and max_samples < len(full_dataset):
+        generator = torch.Generator().manual_seed(training_config["seed"])
+        indices   = torch.randperm(len(full_dataset), generator=generator)[:max_samples]
+        full_dataset = torch.utils.data.Subset(full_dataset, indices.tolist())
+
     validation_count = int(len(full_dataset) * validation_split)
     training_count   = len(full_dataset) - validation_count
 

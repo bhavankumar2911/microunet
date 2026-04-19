@@ -57,16 +57,14 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def run_single_experiment(full_config, seed, data_directory, device):
-    # Two clean blocks — everything reads from one of these
+def run_single_seed(full_config, seed, data_directory, device, experiment_logger):
     ARCHITECTURE_CONFIG         = full_config["architecture"]
     TRAINING_CONFIG             = full_config["training"]
     TRAINING_CONFIG["seed"]     = seed
 
     set_random_seeds(seed)
 
-    run_id = generate_next_run_id()
-    print(f"\n--- Starting run_id={run_id} | seed={seed} ---")
+    print(f"\n--- Seed {seed} ---")
 
     # Training and validation come from the training folder — used for learning and tuning
     training_dataloader, validation_dataloader = create_train_val_dataloaders(
@@ -83,8 +81,8 @@ def run_single_experiment(full_config, seed, data_directory, device):
     # Model is built entirely from architecture config — no hardcoded values inside model.py
     model = build_model(ARCHITECTURE_CONFIG, device)
 
-    experiment_logger = ExperimentLogger(full_config=full_config, run_id=run_id)
-    experiment_logger.start_mlflow_run()
+    # Open a child MLflow run for this seed — nested inside the parent experiment run
+    experiment_logger.start_seed_run(seed)
 
     best_val_dice = train_model(
         model=model,
@@ -98,7 +96,7 @@ def run_single_experiment(full_config, seed, data_directory, device):
     # One-shot final evaluation — never influences any decisions, just honest reporting
     test_dice = evaluate_on_test_set(model, test_dataloader, device)
 
-    experiment_logger.finish_run(best_val_dice, test_dice)
+    experiment_logger.finish_seed_run(best_val_dice, test_dice)
     return best_val_dice, test_dice
 
 
@@ -118,23 +116,22 @@ def main():
     seeds_to_run = SEED_POOL[:arguments.seeds]
     print(f"Running {len(seeds_to_run)} seeds: {seeds_to_run}")
 
+    run_id = generate_next_run_id()
+    experiment_logger = ExperimentLogger(full_config=full_config, run_id=run_id)
+
+    # One parent MLflow run groups all seeds for this experiment
+    experiment_logger.start_experiment()
+
     all_val_dice_scores  = []
     all_test_dice_scores = []
 
     for seed in seeds_to_run:
-        val_dice, test_dice = run_single_experiment(full_config, seed, arguments.data_directory, device)
+        val_dice, test_dice = run_single_seed(full_config, seed, arguments.data_directory, device, experiment_logger)
         all_val_dice_scores.append(val_dice)
         all_test_dice_scores.append(test_dice)
 
-    # Mean ± std is the number you report in the paper — not the best single run
-    val_mean  = np.mean(all_val_dice_scores)
-    val_std   = np.std(all_val_dice_scores)
-    test_mean = np.mean(all_test_dice_scores)
-    test_std  = np.std(all_test_dice_scores)
-
-    print(f"\n=== Results over {len(seeds_to_run)} seeds ===")
-    print(f"Val  Dice: {val_mean:.4f} ± {val_std:.4f}")
-    print(f"Test Dice: {test_mean:.4f} ± {test_std:.4f}")
+    # Close parent run and write mean ± std to MLflow and CSV
+    experiment_logger.finish_experiment(all_val_dice_scores, all_test_dice_scores, seeds_to_run)
 
 
 if __name__ == "__main__":
