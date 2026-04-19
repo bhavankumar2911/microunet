@@ -1,0 +1,21 @@
+architecture:
+  encoder_channels: [16, 32]        # one entry per encoder level — depth is implicit from list length
+  bottleneck_channels: 64
+  normalization: batch_norm          # batch_norm | group_norm | instance_norm
+  group_norm_num_groups: 8           # only used when normalization is group_norm
+  activation: relu                   # relu | leaky_relu | gelu
+  upsampling_mode: transposed_conv   # transposed_conv | bilinear
+  use_residual_connections: false    # adds input back to conv block output
+  use_attention_gates: false         # filters skip connection features before decoder concat
+  dropout_probability: 0.0           # 0.0 means off
+
+training:
+  learning_rate: 0.001
+  weight_decay: 1e-4
+  batch_size: 16
+  epochs: 50
+  seed: 42
+  dataset: BAGLS
+  image_size: 256
+  hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
+  notes: "baseline"

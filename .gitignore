@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# MLflow
+mlruns/
+
+# Data — too large for git
+data/
+
+# OS
+.DS_Store
