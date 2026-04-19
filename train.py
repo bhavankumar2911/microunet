@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 
 
 def compute_dice_loss(predicted_logits, ground_truth_masks, smoothing=1e-6):
@@ -40,7 +41,7 @@ def run_training_epoch(model, training_dataloader, optimizer, device):
     total_loss        = 0.0
     bce_loss_function = nn.BCEWithLogitsLoss()
 
-    for images, masks in training_dataloader:
+    for images, masks in tqdm(training_dataloader, desc="Training", leave=False):
         images = images.to(device)
         masks  = masks.to(device)
 
@@ -65,7 +66,7 @@ def run_validation_epoch(model, validation_dataloader, device):
     bce_loss_function = nn.BCEWithLogitsLoss()
 
     with torch.no_grad():
-        for images, masks in validation_dataloader:
+        for images, masks in tqdm(validation_dataloader, desc="Validating", leave=False):
             images = images.to(device)
             masks  = masks.to(device)
 
@@ -98,11 +99,11 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
 
     best_dice_score = 0.0
 
-    for epoch in range(1, training_config["epochs"] + 1):
+    for epoch in tqdm(range(1, training_config["epochs"] + 1), desc="Epochs"):
         training_loss             = run_training_epoch(model, training_dataloader, optimizer, device)
         validation_loss, val_dice = run_validation_epoch(model, validation_dataloader, device)
 
-        print(f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {val_dice:.4f}")
+        tqdm.write(f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {val_dice:.4f}")
 
         if mlflow_logger:
             mlflow_logger.log_epoch_metrics(epoch, training_loss, validation_loss, val_dice)
