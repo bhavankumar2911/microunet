@@ -27,7 +27,18 @@ SEED_POOL = [42, 43, 44, 123, 456, 789, 1337, 2024, 31415, 99999]
 
 def load_config(config_file_path):
     with open(config_file_path, "r") as yaml_file:
-        return yaml.safe_load(yaml_file)
+        config = yaml.safe_load(yaml_file)
+
+    # YAML parses scientific notation like 1e-4 as a string — cast all numeric
+    # fields explicitly so downstream code never receives unexpected types
+    config["architecture"]["dropout_probability"] = float(config["architecture"]["dropout_probability"])
+    config["training"]["learning_rate"]           = float(config["training"]["learning_rate"])
+    config["training"]["weight_decay"]            = float(config["training"]["weight_decay"])
+    config["training"]["batch_size"]              = int(config["training"]["batch_size"])
+    config["training"]["epochs"]                  = int(config["training"]["epochs"])
+    config["training"]["image_size"]              = int(config["training"]["image_size"])
+
+    return config
 
 
 def set_random_seeds(seed):
@@ -101,6 +112,7 @@ def main():
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
+
     print(f"Device: {device}")
 
     seeds_to_run = SEED_POOL[:arguments.seeds]

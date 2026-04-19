@@ -1,6 +1,6 @@
 architecture:
-  encoder_channels: [16, 32]        # one entry per encoder level — depth is implicit from list length
-  bottleneck_channels: 64
+  encoder_channels: [8, 16]         # one entry per encoder level — depth is implicit from list length
+  bottleneck_channels: 32
   normalization: batch_norm          # batch_norm | group_norm | instance_norm
   group_norm_num_groups: 8           # only used when normalization is group_norm
   activation: relu                   # relu | leaky_relu | gelu

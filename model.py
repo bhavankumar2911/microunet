@@ -197,8 +197,8 @@ class DecoderBlock(nn.Module):
         # After concat: output_channels (upsampled) + output_channels (skip) = input_channels
         self.convolution_block = ConvolutionBlock(input_channels, output_channels, architecture_config)
 
-        self.dropout = nn.Dropout2d(architecture_config["dropout_probability"]) \
-            if architecture_config["dropout_probability"] > 0.0 else nn.Identity()
+        self.dropout = nn.Dropout2d(float(architecture_config["dropout_probability"])) \
+            if float(architecture_config["dropout_probability"]) > 0.0 else nn.Identity()
 
     def forward(self, input_tensor, skip_connection_tensor):
         upsampled = self.upsampling(input_tensor)

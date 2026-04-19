@@ -37,8 +37,8 @@ def compute_dice_score(predicted_logits, ground_truth_masks, smoothing=1e-6):
 
 def run_training_epoch(model, training_dataloader, optimizer, device):
     model.train()
-    total_loss          = 0.0
-    bce_loss_function   = nn.BCEWithLogitsLoss()
+    total_loss        = 0.0
+    bce_loss_function = nn.BCEWithLogitsLoss()
 
     for images, masks in training_dataloader:
         images = images.to(device)
@@ -60,8 +60,8 @@ def run_training_epoch(model, training_dataloader, optimizer, device):
 
 def run_validation_epoch(model, validation_dataloader, device):
     model.eval()
-    total_loss       = 0.0
-    total_dice_score = 0.0
+    total_loss        = 0.0
+    total_dice_score  = 0.0
     bce_loss_function = nn.BCEWithLogitsLoss()
 
     with torch.no_grad():
@@ -99,8 +99,8 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
     best_dice_score = 0.0
 
     for epoch in range(1, training_config["epochs"] + 1):
-        training_loss              = run_training_epoch(model, training_dataloader, optimizer, device)
-        validation_loss, val_dice  = run_validation_epoch(model, validation_dataloader, device)
+        training_loss             = run_training_epoch(model, training_dataloader, optimizer, device)
+        validation_loss, val_dice = run_validation_epoch(model, validation_dataloader, device)
 
         print(f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {val_dice:.4f}")
 
