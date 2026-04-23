@@ -13,9 +13,9 @@ training:
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 32
-  epochs: 10
+  epochs: 15
   dataset: BAGLS
   image_size: 256
-  max_samples: 5000    # null means use full dataset, set a number for faster iteration
+  max_samples: 10000    # null means use full dataset, set a number for faster iteration
   hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
   notes: "baseline"
