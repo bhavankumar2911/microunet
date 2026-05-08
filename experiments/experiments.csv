@@ -2,3 +2,4 @@ run_id,date,dataset,seeds_used,max_samples,encoder_channels,bottleneck_channels,
 202604191709,2026-04-19,BAGLS,"[42, 43, 44]",1000,"[8, 16]",32,batch_norm,False,False,transposed_conv,0.001,0.0001,32,5,0.4427,0.042,0.3392,0.1166,"Baseline micro U-Net with BatchNorm, no attention, no residual",baseline
 202604210031,2026-04-21,BAGLS,"[42, 43, 44]",5000,"[8, 16]",32,batch_norm,False,False,transposed_conv,0.001,0.0001,32,10,0.8269,0.007,0.7264,0.029,"Baseline micro U-Net with BatchNorm, no attention, no residual",baseline
 202604212213,2026-04-21,BAGLS,"[42, 43, 44]",10000,"[8, 16]",32,batch_norm,False,False,transposed_conv,0.001,0.0001,32,15,0.8644,0.0067,0.7825,0.0014,"Baseline micro U-Net with BatchNorm, no attention, no residual",baseline
+202604232031,2026-04-24,BAGLS,"[42, 43, 44]",10000,"[8, 16]",32,batch_norm,False,True,transposed_conv,0.001,0.0001,32,15,0.8575,0.0059,0.6911,0.048,"Baseline micro U-Net with BatchNorm, no attention, no residual",baseline

@@ -1,190 +1,127 @@
 import csv
-from datetime import datetime
+import statistics
+from datetime import date
 from pathlib import Path
 
 import mlflow
-import numpy as np
 import yaml
 
 
-EXPERIMENTS_CSV_PATH          = Path("experiments/experiments.csv")
+EXPERIMENTS_CSV_PATH          = Path("experiments/experiments1.csv")
 EXPERIMENTS_CONFIGS_DIRECTORY = Path("experiments/configs")
 
 CSV_COLUMN_HEADERS = [
-    "run_id", "date", "dataset", "seeds_used", "max_samples",
+    "run_id", "date", "dataset", "seeds_run",
     "encoder_channels", "bottleneck_channels", "normalization",
     "use_residual_connections", "use_attention_gates", "upsampling_mode",
     "learning_rate", "weight_decay", "batch_size", "epochs",
-    "val_dice_mean", "val_dice_std",
-    "test_dice_mean", "test_dice_std",
-    "hypothesis", "notes"
+    "mean_val_dice", "std_val_dice", "hypothesis", "notes", "interpretation"
 ]
 
 
 class ExperimentLogger:
-    """
-    One MLflow run and one CSV row per experiment (across all seeds).
-    Per-seed metrics are logged as child runs inside the parent MLflow run.
-    The CSV row and MLflow parent run report mean ± std across all seeds.
-
-    - MLflow parent run:  mean ± std metrics + config params
-    - MLflow child runs:  per-seed epoch curves for detailed inspection
-    - experiments.csv:    one row per experiment — mean ± std for reporting
-    - config_XXX.yaml:    frozen snapshot of the exact config used
-    """
-
     def __init__(self, full_config, run_id):
-        self.full_config  = full_config
-        self.architecture = full_config["architecture"]
-        self.training     = full_config["training"]
-        self.run_id       = run_id
-        self.parent_run_id = None
+        self.full_config         = full_config
+        self.architecture_config = full_config["architecture"]
+        self.training_config     = full_config["training"]
+        self.run_id              = run_id
 
         EXPERIMENTS_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
         EXPERIMENTS_CONFIGS_DIRECTORY.mkdir(parents=True, exist_ok=True)
-        self._initialize_csv_if_missing()
+        self._create_csv_with_headers_if_not_exists()
 
-    def _initialize_csv_if_missing(self):
-        # Always write headers — even if file exists but is empty
-        if not EXPERIMENTS_CSV_PATH.exists() or EXPERIMENTS_CSV_PATH.stat().st_size == 0:
+    def _create_csv_with_headers_if_not_exists(self):
+        if not EXPERIMENTS_CSV_PATH.exists():
             with open(EXPERIMENTS_CSV_PATH, "w", newline="") as csv_file:
                 csv.DictWriter(csv_file, fieldnames=CSV_COLUMN_HEADERS).writeheader()
 
     def start_experiment(self):
-        """Opens the parent MLflow run that groups all seeds together."""
         mlflow.set_experiment("microunet")
-        parent_run = mlflow.start_run(run_name=self.run_id)
-        self.parent_run_id = parent_run.info.run_id
+        mlflow.start_run(run_name=self.run_id)
 
         mlflow.log_params({
-            "encoder_channels":         str(self.architecture["encoder_channels"]),
-            "bottleneck_channels":      self.architecture["bottleneck_channels"],
-            "normalization":            self.architecture["normalization"],
-            "activation":               self.architecture["activation"],
-            "upsampling_mode":          self.architecture["upsampling_mode"],
-            "use_residual_connections": self.architecture["use_residual_connections"],
-            "use_attention_gates":      self.architecture["use_attention_gates"],
-            "dropout_probability":      self.architecture["dropout_probability"],
-            "dataset":                  self.training["dataset"],
-            "max_samples":              self.training.get("max_samples", "full"),
-            "learning_rate":            self.training["learning_rate"],
-            "weight_decay":             self.training["weight_decay"],
-            "batch_size":               self.training["batch_size"],
-            "epochs":                   self.training["epochs"],
-            "hypothesis":               self.training["hypothesis"],
+            "encoder_channels":         str(self.architecture_config["encoder_channels"]),
+            "bottleneck_channels":      self.architecture_config["bottleneck_channels"],
+            "normalization":            self.architecture_config["normalization"],
+            "activation":               self.architecture_config["activation"],
+            "upsampling_mode":          self.architecture_config["upsampling_mode"],
+            "use_residual_connections": self.architecture_config["use_residual_connections"],
+            "use_attention_gates":      self.architecture_config["use_attention_gates"],
+            "dropout_probability":      self.architecture_config["dropout_probability"],
+            "dataset":                  self.training_config["dataset"],
+            "learning_rate":            self.training_config["learning_rate"],
+            "weight_decay":             self.training_config["weight_decay"],
+            "batch_size":               self.training_config["batch_size"],
+            "epochs":                   self.training_config["epochs"],
+            "hypothesis":               self.training_config["hypothesis"],
         })
-        # End the run here — child runs will resume it with nested=True
-        mlflow.end_run()
 
     def start_seed_run(self, seed):
-        """Opens a child MLflow run for a single seed — nested under the parent run."""
-        mlflow.start_run(run_id=self.parent_run_id)
         mlflow.start_run(run_name=f"{self.run_id}_seed{seed}", nested=True)
         mlflow.log_param("seed", seed)
 
-    def log_epoch_metrics(self, epoch, training_loss, validation_loss, validation_dice):
+    def log_epoch_metrics(self, epoch, training_loss, validation_loss, validation_dice_score):
         mlflow.log_metrics({
-            "loss_train": training_loss,
-            "loss_val":   validation_loss,
-            "dice_val":   validation_dice,
+            "training_loss":         training_loss,
+            "validation_loss":       validation_loss,
+            "validation_dice_score": validation_dice_score
         }, step=epoch)
 
-    def finish_seed_run(self, best_val_dice, test_dice):
-        """Closes the child run for one seed, then closes the resumed parent run."""
-        mlflow.log_metric("best_val_dice", best_val_dice)
-        mlflow.log_metric("test_dice", test_dice)
-        mlflow.end_run()  # ends child run
-        mlflow.end_run()  # ends resumed parent run
+    def finish_seed_run(self, best_validation_dice_score):
+        mlflow.log_metric("best_validation_dice_score", best_validation_dice_score)
+        mlflow.end_run()
 
-    def finish_experiment(self, all_val_dice_scores, all_test_dice_scores, seeds_used):
-        """Resumes the parent run, logs mean ± std across all seeds, then closes it."""
-        val_mean  = float(np.mean(all_val_dice_scores))
-        val_std   = float(np.std(all_val_dice_scores))
-        test_mean = float(np.mean(all_test_dice_scores))
-        test_std  = float(np.std(all_test_dice_scores))
+    def finish_experiment(self, all_validation_dice_scores, seeds_run):
+        mean_validation_dice = statistics.mean(all_validation_dice_scores)
+        std_validation_dice  = statistics.stdev(all_validation_dice_scores) if len(all_validation_dice_scores) > 1 else 0.0
 
-        with mlflow.start_run(run_id=self.parent_run_id):
-            mlflow.log_metrics({
-                "val_dice_mean":  val_mean,
-                "val_dice_std":   val_std,
-                "test_dice_mean": test_mean,
-                "test_dice_std":  test_std,
-            })
+        mlflow.log_metrics({
+            "mean_val_dice": mean_validation_dice,
+            "std_val_dice":  std_validation_dice,
+        })
+        mlflow.end_run()
 
-        self._save_config_yaml()
-        self._append_row_to_csv(val_mean, val_std, test_mean, test_std, seeds_used)
+        self._save_frozen_config_snapshot_to_yaml()
+        self._append_experiment_row_to_csv(mean_validation_dice, std_validation_dice, seeds_run)
 
-        print(f"\nExperiment {self.run_id} complete")
-        print(f"Val  Dice: {val_mean:.4f} ± {val_std:.4f}")
-        print(f"Test Dice: {test_mean:.4f} ± {test_std:.4f}")
+        print(f"\nExperiment {self.run_id} complete | mean_val_dice={mean_validation_dice:.4f} ± {std_validation_dice:.4f} over seeds {seeds_run}")
 
-    def _save_config_yaml(self):
-        """
-        Saves a frozen snapshot of the config in the same block style as default.yaml.
-        Uses a custom representer so lists like [8, 16] stay on one line (flow style)
-        while all other fields use the readable block style.
-        """
-        config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
+    def _save_frozen_config_snapshot_to_yaml(self):
+        frozen_config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
+        with open(frozen_config_path, "w") as yaml_file:
+            yaml.dump(self.full_config, yaml_file, default_flow_style=False)
 
-        # Custom representer: lists → flow style [8, 16], everything else → block style
-        class BlockWithFlowLists(yaml.Dumper):
-            pass
-
-        def represent_list_as_flow(dumper, data):
-            return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
-
-        BlockWithFlowLists.add_representer(list, represent_list_as_flow)
-
-        with open(config_path, "w") as yaml_file:
-            yaml.dump(self.full_config, yaml_file, Dumper=BlockWithFlowLists, default_flow_style=False)
-
-    def _append_row_to_csv(self, val_mean, val_std, test_mean, test_std, seeds_used):
+    def _append_experiment_row_to_csv(self, mean_validation_dice, std_validation_dice, seeds_run):
         row = {
             "run_id":                   self.run_id,
-            "date":                     datetime.now().strftime("%Y-%m-%d"),
-            "dataset":                  self.training["dataset"],
-            "seeds_used":               str(seeds_used),
-            "max_samples":              self.training.get("max_samples", "full"),
-            "encoder_channels":         str(self.architecture["encoder_channels"]),
-            "bottleneck_channels":      self.architecture["bottleneck_channels"],
-            "normalization":            self.architecture["normalization"],
-            "use_residual_connections": self.architecture["use_residual_connections"],
-            "use_attention_gates":      self.architecture["use_attention_gates"],
-            "upsampling_mode":          self.architecture["upsampling_mode"],
-            "learning_rate":            self.training["learning_rate"],
-            "weight_decay":             self.training["weight_decay"],
-            "batch_size":               self.training["batch_size"],
-            "epochs":                   self.training["epochs"],
-            "val_dice_mean":            round(val_mean, 4),
-            "val_dice_std":             round(val_std, 4),
-            "test_dice_mean":           round(test_mean, 4),
-            "test_dice_std":            round(test_std, 4),
-            "hypothesis":               self.training["hypothesis"],
-            "notes":                    self.training.get("notes", ""),
+            "date":                     str(date.today()),
+            "dataset":                  self.training_config["dataset"],
+            "seeds_run":                str(seeds_run),
+            "encoder_channels":         str(self.architecture_config["encoder_channels"]),
+            "bottleneck_channels":      self.architecture_config["bottleneck_channels"],
+            "normalization":            self.architecture_config["normalization"],
+            "use_residual_connections": self.architecture_config["use_residual_connections"],
+            "use_attention_gates":      self.architecture_config["use_attention_gates"],
+            "upsampling_mode":          self.architecture_config["upsampling_mode"],
+            "learning_rate":            self.training_config["learning_rate"],
+            "weight_decay":             self.training_config["weight_decay"],
+            "batch_size":               self.training_config["batch_size"],
+            "epochs":                   self.training_config["epochs"],
+            "mean_val_dice":            round(mean_validation_dice, 4),
+            "std_val_dice":             round(std_validation_dice, 4),
+            "hypothesis":               self.training_config["hypothesis"],
+            "notes":                    self.training_config.get("notes", ""),
+            "interpretation":           "",
         }
         with open(EXPERIMENTS_CSV_PATH, "a", newline="") as csv_file:
             csv.DictWriter(csv_file, fieldnames=CSV_COLUMN_HEADERS).writerow(row)
 
 
 def generate_next_run_id():
-    """Generates a run ID in yyyyMMddHHmm format with a counter suffix if needed."""
-    base_id = datetime.now().strftime("%Y%m%d%H%M")
-
-    if not EXPERIMENTS_CSV_PATH.exists() or EXPERIMENTS_CSV_PATH.stat().st_size == 0:
-        return base_id
-
+    if not EXPERIMENTS_CSV_PATH.exists():
+        return "001"
     with open(EXPERIMENTS_CSV_PATH, "r") as csv_file:
-        rows = list(csv.DictReader(csv_file))
-
-    if not rows:
-        return base_id
-
-    # If a run with the same timestamp already exists, append a counter
-    existing_ids = [row["run_id"] for row in rows]
-    if base_id not in existing_ids:
-        return base_id
-
-    counter = 2
-    while f"{base_id}_{counter}" in existing_ids:
-        counter += 1
-    return f"{base_id}_{counter}"
+        all_existing_rows = list(csv.DictReader(csv_file))
+    if not all_existing_rows:
+        return "001"
+    return str(int(all_existing_rows[-1]["run_id"]) + 1).zfill(3)
