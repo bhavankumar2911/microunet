@@ -1,21 +1,22 @@
 architecture:
-  encoder_channels: [6, 12, 24]        
-  bottleneck_channels: 48
+  encoder_channels: [8, 16, 32]        
+  bottleneck_channels: 32
+  kernel_size: 3
   normalization: batch_norm         
   group_norm_num_groups: 8          
   activation: relu                  
-  upsampling_mode: transposed_conv  
+  upsampling_mode: bilinear  
   use_residual_connections: false   
-  use_attention_gates: true        
+  use_attention_gates: false        
   dropout_probability: 0.0          
 
 training:
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 32
-  epochs: 15
+  epochs: 20
   dataset: BAGLS
   image_size: 256
-  max_samples: 10000   
+  max_samples: 20000   
   hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
   notes: "baseline"

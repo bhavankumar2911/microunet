@@ -12,7 +12,7 @@ EXPERIMENTS_CONFIGS_DIRECTORY = Path("experiments/configs")
 
 CSV_COLUMN_HEADERS = [
     "run_id", "date", "dataset", "seeds_run",
-    "encoder_channels", "bottleneck_channels", "normalization",
+    "encoder_channels", "bottleneck_channels", "kernel_size", "normalization",
     "use_residual_connections", "use_attention_gates", "upsampling_mode",
     "learning_rate", "weight_decay", "batch_size", "epochs",
     "mean_val_dice", "std_val_dice", "hypothesis", "notes", "interpretation"
@@ -42,6 +42,7 @@ class ExperimentLogger:
         mlflow.log_params({
             "encoder_channels":         str(self.architecture_config["encoder_channels"]),
             "bottleneck_channels":      self.architecture_config["bottleneck_channels"],
+            "kernel_size":              self.architecture_config["kernel_size"],
             "normalization":            self.architecture_config["normalization"],
             "activation":               self.architecture_config["activation"],
             "upsampling_mode":          self.architecture_config["upsampling_mode"],
@@ -99,6 +100,7 @@ class ExperimentLogger:
             "seeds_run":                str(seeds_run),
             "encoder_channels":         str(self.architecture_config["encoder_channels"]),
             "bottleneck_channels":      self.architecture_config["bottleneck_channels"],
+            "kernel_size":              self.architecture_config["kernel_size"],
             "normalization":            self.architecture_config["normalization"],
             "use_residual_connections": self.architecture_config["use_residual_connections"],
             "use_attention_gates":      self.architecture_config["use_attention_gates"],

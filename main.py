@@ -25,6 +25,7 @@ def load_yaml_config(config_file_path):
         full_config = yaml.safe_load(yaml_file)
 
     full_config["architecture"]["dropout_probability"] = float(full_config["architecture"]["dropout_probability"])
+    full_config["architecture"]["kernel_size"]         = int(full_config["architecture"]["kernel_size"])
     full_config["training"]["learning_rate"]           = float(full_config["training"]["learning_rate"])
     full_config["training"]["weight_decay"]            = float(full_config["training"]["weight_decay"])
     full_config["training"]["batch_size"]              = int(full_config["training"]["batch_size"])
@@ -81,7 +82,7 @@ def run_single_seed(full_config, seed, data_directory, device, experiment_logger
 
 
 def main():
-    arguments = parse_command_line_arguments()
+    arguments   = parse_command_line_arguments()
     full_config = load_yaml_config(arguments.config)
 
     if torch.cuda.is_available():
@@ -94,8 +95,8 @@ def main():
     seeds_to_run = FIXED_SEED_POOL[:arguments.seeds]
     print(f"Device: {device} | Running {len(seeds_to_run)} seeds: {seeds_to_run}")
 
-    run_id = generate_next_run_id()
-    experiment_logger = ExperimentLogger(full_config=full_config, run_id=run_id)
+    run_id             = generate_next_run_id()
+    experiment_logger  = ExperimentLogger(full_config=full_config, run_id=run_id)
     experiment_logger.start_experiment()
 
     all_validation_dice_scores = []
