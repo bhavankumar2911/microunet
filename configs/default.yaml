@@ -2,7 +2,7 @@ architecture:
   encoder_channels: [8, 16, 32]        
   bottleneck_channels: 32
   kernel_size: 3
-  normalization: batch_norm         
+  normalization: none         
   group_norm_num_groups: 8          
   activation: relu                  
   upsampling_mode: bilinear  
