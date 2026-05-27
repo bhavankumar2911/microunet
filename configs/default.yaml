@@ -1,22 +1,23 @@
 architecture:
-  encoder_channels: [8, 16, 32]        
+  encoder_channels: [8, 16, 32]
   bottleneck_channels: 32
   kernel_size: 3
-  normalization: none         
-  group_norm_num_groups: 8          
-  activation: relu                  
-  upsampling_mode: bilinear  
-  use_residual_connections: false   
-  use_attention_gates: false        
-  dropout_probability: 0.0          
+  normalization: none
+  group_norm_num_groups: 8
+  activation: relu
+  upsampling_mode: bilinear
+  use_residual_connections: false
+  use_attention_gates: false
+  dropout_probability: 0.0
 
 training:
+  data_root: data/EMSegmentation
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
   epochs: 20
-  dataset: BAGLS
+  dataset: EMSegmentation
   image_size: 256
-  max_samples: 20000   
-  hypothesis: "Baseline micro U-Net with BatchNorm, no attention, no residual"
-  notes: "baseline"
+  max_samples: 20000
+  hypothesis: "Batch Normalization makes the learning stable."
+  notes: "Using EM - Mitochondria Dataset for Hypothesis 1"

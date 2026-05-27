@@ -45,20 +45,19 @@ def seed_all_random_number_generators(seed):
 
 def parse_command_line_arguments():
     argument_parser = argparse.ArgumentParser(description="MicroUNet experiment runner")
-    argument_parser.add_argument("--config",         type=str, default="configs/default.yaml")
-    argument_parser.add_argument("--seeds",          type=int, default=3, help="How many seeds to run from the fixed seed pool")
-    argument_parser.add_argument("--data_directory", type=str, default="data/bagls")
+    argument_parser.add_argument("--config", type=str, default="configs/default.yaml")
+    argument_parser.add_argument("--seeds",  type=int, default=3, help="How many seeds to run from the fixed seed pool")
     return argument_parser.parse_args()
 
 
-def run_single_seed(full_config, seed, data_directory, device, experiment_logger):
+def run_single_seed(full_config, seed, device, experiment_logger):
     full_config["training"]["seed"] = seed
     seed_all_random_number_generators(seed)
 
     print(f"\n--- Seed {seed} ---")
 
     training_dataloader, validation_dataloader = create_train_val_dataloaders(
-        root_directory=data_directory,
+        root_directory=full_config["training"]["data_root"],
         training_config=full_config["training"]
     )
 
@@ -95,14 +94,14 @@ def main():
     seeds_to_run = FIXED_SEED_POOL[:arguments.seeds]
     print(f"Device: {device} | Running {len(seeds_to_run)} seeds: {seeds_to_run}")
 
-    run_id             = generate_next_run_id()
-    experiment_logger  = ExperimentLogger(full_config=full_config, run_id=run_id)
+    run_id            = generate_next_run_id()
+    experiment_logger = ExperimentLogger(full_config=full_config, run_id=run_id)
     experiment_logger.start_experiment()
 
     all_validation_dice_scores = []
 
     for seed in seeds_to_run:
-        validation_dice_score = run_single_seed(full_config, seed, arguments.data_directory, device, experiment_logger)
+        validation_dice_score = run_single_seed(full_config, seed, device, experiment_logger)
         all_validation_dice_scores.append(validation_dice_score)
 
     experiment_logger.finish_experiment(all_validation_dice_scores, seeds_to_run)
