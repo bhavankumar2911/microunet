@@ -1,6 +1,6 @@
 architecture:
-  encoder_channels: [6, 12, 24]        
-  bottleneck_channels: 48
+  encoder_channels: [8, 16, 32]        
+  bottleneck_channels: 32
   kernel_size: 3
   normalization: none         
   group_norm_num_groups: 8          
