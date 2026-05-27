@@ -15,9 +15,9 @@ training:
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
-  epochs: 20
+  epochs: 40
   dataset: EMSegmentation
   image_size: 256
-  max_samples: 20000
+  # max_samples: none
   hypothesis: "Batch Normalization makes the learning stable."
   notes: "Using EM - Mitochondria Dataset for Hypothesis 1"

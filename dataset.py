@@ -84,7 +84,7 @@ class EMSegmentationDataset(SegmentationDataset):
 
     def __init__(self, root_directory, image_size, split="train"):
         self.images_directory = Path(root_directory) / split / "images" / "img"
-        self.masks_directory  = Path(root_directory) / split / "masks"
+        self.masks_directory  = Path(root_directory) / split / "masks" / "img"
         super().__init__(image_size)
 
     def collect_all_image_filepaths(self):
