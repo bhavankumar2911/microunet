@@ -11,12 +11,12 @@ architecture:
   dropout_probability: 0.0
 
 training:
-  data_root: data/EMSegmentation
+  data_root: data/Polyp
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
-  epochs: 40
-  dataset: EMSegmentation
+  epochs: 45
+  dataset: Polyp
   image_size: 256
   # max_samples: none
   hypothesis: "Batch Normalization makes the learning stable."

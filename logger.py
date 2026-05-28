@@ -1,6 +1,6 @@
 import csv
 import statistics
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import mlflow
@@ -120,10 +120,4 @@ class ExperimentLogger:
 
 
 def generate_next_run_id():
-    if not EXPERIMENTS_CSV_PATH.exists():
-        return "001"
-    with open(EXPERIMENTS_CSV_PATH, "r") as csv_file:
-        all_existing_rows = list(csv.DictReader(csv_file))
-    if not all_existing_rows:
-        return "001"
-    return str(int(all_existing_rows[-1]["run_id"]) + 1).zfill(3)
+    return datetime.now().strftime("%Y_%m_%d_%H_%M_%S")

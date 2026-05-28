@@ -97,10 +97,28 @@ class EMSegmentationDataset(SegmentationDataset):
     def find_corresponding_mask_filepath(self, image_filepath):
         return self.masks_directory / image_filepath.name
 
+class PolypSegmentationDataset(SegmentationDataset):
+    has_predefined_validation_split = True
+
+    def __init__(self, root_directory, image_size, split="train"):
+        self.images_directory = Path(root_directory) / split / "images"
+        self.masks_directory  = Path(root_directory) / split / "masks"
+        super().__init__(image_size)
+
+    def collect_all_image_filepaths(self):
+        return sorted([
+            self.images_directory / filename
+            for filename in os.listdir(self.images_directory)
+            if filename.endswith(".jpg")
+        ])
+
+    def find_corresponding_mask_filepath(self, image_filepath):
+        return self.masks_directory / image_filepath.name
 
 DATASET_REGISTRY = {
     "BAGLS":          BAGLSSegmentationDataset,
     "EMSegmentation": EMSegmentationDataset,
+    "Polyp":          PolypSegmentationDataset,
 }
 
 
