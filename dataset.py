@@ -113,7 +113,7 @@ class PolypSegmentationDataset(SegmentationDataset):
         ])
 
     def find_corresponding_mask_filepath(self, image_filepath):
-        return self.masks_directory / image_filepath.name
+        return self.masks_directory / (image_filepath.stem + ".png")
 
 DATASET_REGISTRY = {
     "BAGLS":          BAGLSSegmentationDataset,
