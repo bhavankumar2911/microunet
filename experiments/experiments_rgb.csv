@@ -1,0 +1,2 @@
+run_id,date,dataset,seeds_run,encoder_channels,bottleneck_channels,input_channels,kernel_size,normalization,use_residual_connections,use_attention_gates,upsampling_mode,use_color_input,learning_rate,weight_decay,batch_size,epochs,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
+2026_06_04_17_53_52,2026-06-04,Polyp,"[42, 43, 44]","[8, 16, 32]",32,3,3,none,False,False,bilinear,True,0.001,0.0001,64,45,0.5478,0.0412,Batch Normalization makes the learning stable.,RGB channel support for Polyp,

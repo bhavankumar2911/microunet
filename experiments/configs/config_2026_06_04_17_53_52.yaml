@@ -1,0 +1,27 @@
+architecture:
+  activation: relu
+  bottleneck_channels: 32
+  dropout_probability: 0.0
+  encoder_channels:
+  - 8
+  - 16
+  - 32
+  group_norm_num_groups: 8
+  input_channels: 3
+  kernel_size: 3
+  normalization: none
+  upsampling_mode: bilinear
+  use_attention_gates: false
+  use_residual_connections: false
+training:
+  batch_size: 64
+  data_root: data/Polyp
+  dataset: Polyp
+  epochs: 45
+  hypothesis: Batch Normalization makes the learning stable.
+  image_size: 256
+  learning_rate: 0.001
+  notes: RGB channel support for Polyp
+  seed: 44
+  use_color_input: true
+  weight_decay: 0.0001

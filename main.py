@@ -26,11 +26,13 @@ def load_yaml_config(config_file_path):
 
     full_config["architecture"]["dropout_probability"] = float(full_config["architecture"]["dropout_probability"])
     full_config["architecture"]["kernel_size"]         = int(full_config["architecture"]["kernel_size"])
+    full_config["architecture"]["input_channels"]      = int(full_config["architecture"]["input_channels"])
     full_config["training"]["learning_rate"]           = float(full_config["training"]["learning_rate"])
     full_config["training"]["weight_decay"]            = float(full_config["training"]["weight_decay"])
     full_config["training"]["batch_size"]              = int(full_config["training"]["batch_size"])
     full_config["training"]["epochs"]                  = int(full_config["training"]["epochs"])
     full_config["training"]["image_size"]              = int(full_config["training"]["image_size"])
+    full_config["training"]["use_color_input"]         = bool(full_config["training"].get("use_color_input", False))
 
     return full_config
 

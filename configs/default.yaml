@@ -9,6 +9,7 @@ architecture:
   use_residual_connections: false
   use_attention_gates: false
   dropout_probability: 0.0
+  input_channels: 3
 
 training:
   data_root: data/Polyp
@@ -19,5 +20,6 @@ training:
   dataset: Polyp
   image_size: 256
   # max_samples: none
+  use_color_input: true
   hypothesis: "Batch Normalization makes the learning stable."
-  notes: "Using Polyp Dataset for Hypothesis 1"
+  notes: "RGB channel support for Polyp"

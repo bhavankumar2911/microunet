@@ -30,7 +30,7 @@ class ConvolutionBlock(nn.Module):
         group_norm_groups  = architecture_config["group_norm_num_groups"]
         activation_type    = architecture_config["activation"]
         kernel_size        = architecture_config["kernel_size"]
-        same_size_padding  = kernel_size // 2  # keeps spatial dimensions unchanged for odd kernels
+        same_size_padding  = kernel_size // 2
 
         self.apply_residual_connection = architecture_config["use_residual_connections"]
 
@@ -59,15 +59,13 @@ class AttentionGate(nn.Module):
     def __init__(self, skip_channels, gate_channels, intermediate_channels=16):
         super().__init__()
 
-        self.project_gating_signal_to_intermediate  = nn.Conv2d(gate_channels, intermediate_channels, kernel_size=1, bias=False)
-        self.project_skip_features_to_intermediate  = nn.Conv2d(skip_channels, intermediate_channels, kernel_size=1, bias=False)
-        self.collapse_intermediate_to_attention_map = nn.Conv2d(intermediate_channels, 1, kernel_size=1, bias=False)
+        self.project_gating_signal_to_intermediate  = nn.Conv2d(gate_channels,  intermediate_channels, kernel_size=1, bias=False)
+        self.project_skip_features_to_intermediate  = nn.Conv2d(skip_channels,  intermediate_channels, kernel_size=1, bias=False)
+        self.collapse_intermediate_to_attention_map = nn.Conv2d(intermediate_channels, 1,               kernel_size=1, bias=False)
 
     def forward(self, skip_features, gating_signal):
         gating_projected = self.project_gating_signal_to_intermediate(gating_signal)
 
-        # upsample to exactly the skip connection's spatial size — handles odd dimensions
-        # that arise when input images are not exact powers of two after padding/resize
         gating_upsampled_to_skip_size = nn.functional.interpolate(
             gating_projected,
             size=skip_features.shape[2:],
@@ -75,9 +73,8 @@ class AttentionGate(nn.Module):
             align_corners=True
         )
 
-        skip_projection      = self.project_skip_features_to_intermediate(skip_features)
-        combined_projections = torch.relu(skip_projection + gating_upsampled_to_skip_size)
-
+        skip_projection             = self.project_skip_features_to_intermediate(skip_features)
+        combined_projections        = torch.relu(skip_projection + gating_upsampled_to_skip_size)
         per_pixel_attention_weights = torch.sigmoid(self.collapse_intermediate_to_attention_map(combined_projections))
 
         return skip_features * per_pixel_attention_weights
@@ -125,8 +122,6 @@ class DecoderBlock(nn.Module):
     def forward(self, input_tensor, skip_connection_tensor):
         upsampled_features = self.spatial_upsampler(input_tensor)
 
-        # clamp to exact skip spatial size — transposed conv on odd input dimensions
-        # can produce off-by-one sizes (e.g. 33 -> 66 instead of 67), so we force alignment
         if upsampled_features.shape[2:] != skip_connection_tensor.shape[2:]:
             upsampled_features = nn.functional.interpolate(
                 upsampled_features,
@@ -143,11 +138,12 @@ class DecoderBlock(nn.Module):
 
 
 class MicroUNet(nn.Module):
-    def __init__(self, architecture_config, input_channels=1, output_channels=1):
+    def __init__(self, architecture_config, output_channels=1):
         super().__init__()
 
         encoder_channel_sizes   = architecture_config["encoder_channels"]
         bottleneck_channel_size = architecture_config["bottleneck_channels"]
+        input_channels          = architecture_config.get("input_channels", 1)
 
         self.encoder_blocks = nn.ModuleList()
         current_channel_count = input_channels
@@ -166,7 +162,7 @@ class MicroUNet(nn.Module):
         self.final_one_by_one_segmentation_head = nn.Conv2d(decoder_input_channel_count, output_channels, kernel_size=1)
 
     def forward(self, input_tensor):
-        input_spatial_size  = input_tensor.shape[2:]
+        input_spatial_size   = input_tensor.shape[2:]
         all_skip_connections = []
         current_feature_map  = input_tensor
 
@@ -181,8 +177,6 @@ class MicroUNet(nn.Module):
 
         raw_output = self.final_one_by_one_segmentation_head(current_feature_map)
 
-        # guarantee output matches input spatial size exactly — small size drifts can
-        # accumulate through repeated odd-dimension alignments in the decoder
         if raw_output.shape[2:] != input_spatial_size:
             return nn.functional.interpolate(raw_output, size=input_spatial_size, mode="bilinear", align_corners=True)
 
@@ -193,7 +187,7 @@ class MicroUNet(nn.Module):
 
 
 def build_model(architecture_config, device):
-    model = MicroUNet(architecture_config)
+    model                      = MicroUNet(architecture_config)
     total_trainable_parameters = model.count_trainable_parameters()
     print(f"Model: MicroUNet | Parameters: {total_trainable_parameters:,} ({total_trainable_parameters / 1e6:.4f}M)")
     assert total_trainable_parameters < 100_000, f"Model exceeds 0.1M parameter limit: {total_trainable_parameters:,}"

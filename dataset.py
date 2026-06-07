@@ -22,13 +22,24 @@ class PadShorterSideWithZerosToMakeSquare:
 class SegmentationDataset(Dataset, ABC):
     has_predefined_validation_split = False
 
-    def __init__(self, image_size):
-        self.image_transform_pipeline = transforms.Compose([
-            PadShorterSideWithZerosToMakeSquare(),
-            transforms.Resize((image_size, image_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5], std=[0.5])
-        ])
+    def __init__(self, image_size, use_color_input=False):
+        self.use_color_input = use_color_input
+
+        if use_color_input:
+            self.image_transform_pipeline = transforms.Compose([
+                PadShorterSideWithZerosToMakeSquare(),
+                transforms.Resize((image_size, image_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.image_transform_pipeline = transforms.Compose([
+                PadShorterSideWithZerosToMakeSquare(),
+                transforms.Resize((image_size, image_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5])
+            ])
+
         self.mask_transform_pipeline = transforms.Compose([
             PadShorterSideWithZerosToMakeSquare(),
             transforms.Resize((image_size, image_size), interpolation=Image.NEAREST),
@@ -51,22 +62,22 @@ class SegmentationDataset(Dataset, ABC):
         image_filepath = self.all_image_filepaths[index]
         mask_filepath  = self.find_corresponding_mask_filepath(image_filepath)
 
-        grayscale_image = Image.open(image_filepath).convert("L")
-        grayscale_mask  = Image.open(mask_filepath).convert("L")
+        image = Image.open(image_filepath).convert("RGB" if self.use_color_input else "L")
+        mask  = Image.open(mask_filepath).convert("L")
 
-        image_tensor = self.image_transform_pipeline(grayscale_image)
-        mask_tensor  = self.mask_transform_pipeline(grayscale_mask)
-
+        image_tensor       = self.image_transform_pipeline(image)
+        mask_tensor        = self.mask_transform_pipeline(mask)
         binary_mask_tensor = (mask_tensor > 0.5).float()
+
         return image_tensor, binary_mask_tensor
 
 
 class BAGLSSegmentationDataset(SegmentationDataset):
     has_predefined_validation_split = False
 
-    def __init__(self, bagls_root_directory, image_size, split="training"):
-        self.split_directory = Path(bagls_root_directory) / split
-        super().__init__(image_size)
+    def __init__(self, root_directory, image_size, split="training", use_color_input=False):
+        self.split_directory = Path(root_directory) / split
+        super().__init__(image_size, use_color_input)
 
     def collect_all_image_filepaths(self):
         return sorted([
@@ -82,10 +93,10 @@ class BAGLSSegmentationDataset(SegmentationDataset):
 class EMSegmentationDataset(SegmentationDataset):
     has_predefined_validation_split = True
 
-    def __init__(self, root_directory, image_size, split="train"):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
         self.images_directory = Path(root_directory) / split / "images" / "img"
         self.masks_directory  = Path(root_directory) / split / "masks" / "img"
-        super().__init__(image_size)
+        super().__init__(image_size, use_color_input)
 
     def collect_all_image_filepaths(self):
         return sorted([
@@ -97,13 +108,14 @@ class EMSegmentationDataset(SegmentationDataset):
     def find_corresponding_mask_filepath(self, image_filepath):
         return self.masks_directory / image_filepath.name
 
+
 class PolypSegmentationDataset(SegmentationDataset):
     has_predefined_validation_split = True
 
-    def __init__(self, root_directory, image_size, split="train"):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
         self.images_directory = Path(root_directory) / split / "images"
         self.masks_directory  = Path(root_directory) / split / "masks"
-        super().__init__(image_size)
+        super().__init__(image_size, use_color_input)
 
     def collect_all_image_filepaths(self):
         return sorted([
@@ -114,6 +126,7 @@ class PolypSegmentationDataset(SegmentationDataset):
 
     def find_corresponding_mask_filepath(self, image_filepath):
         return self.masks_directory / (image_filepath.stem + ".png")
+
 
 DATASET_REGISTRY = {
     "BAGLS":          BAGLSSegmentationDataset,
@@ -129,11 +142,12 @@ def resolve_dataset_class_from_registry(dataset_name):
 
 
 def create_train_val_dataloaders(root_directory, training_config, validation_fraction=0.2):
-    dataset_class = resolve_dataset_class_from_registry(training_config["dataset"])
+    dataset_class  = resolve_dataset_class_from_registry(training_config["dataset"])
+    use_color      = training_config.get("use_color_input", False)
 
     if dataset_class.has_predefined_validation_split:
-        training_dataset   = dataset_class(root_directory, training_config["image_size"], split="train")
-        validation_dataset = dataset_class(root_directory, training_config["image_size"], split="val")
+        training_dataset   = dataset_class(root_directory, training_config["image_size"], split="train", use_color_input=use_color)
+        validation_dataset = dataset_class(root_directory, training_config["image_size"], split="val",   use_color_input=use_color)
 
         training_sample_count   = len(training_dataset)
         validation_sample_count = len(validation_dataset)
@@ -142,7 +156,7 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         validation_dataloader = DataLoader(validation_dataset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     else:
-        full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training")
+        full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
 
         maximum_samples_to_use = training_config.get("max_samples", None)
         if maximum_samples_to_use and maximum_samples_to_use < len(full_training_dataset):
