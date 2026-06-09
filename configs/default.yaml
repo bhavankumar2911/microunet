@@ -16,10 +16,10 @@ training:
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
-  epochs: 45
+  epochs: 60
   dataset: Polyp
   image_size: 256
   # max_samples: none
   use_color_input: true
   hypothesis: "Batch Normalization makes the learning stable."
-  notes: "RGB channel support for Polyp"
+  notes: "More Epochs for Polyp dataset to check if Dice improves."

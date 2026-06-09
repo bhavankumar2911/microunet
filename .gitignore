@@ -17,3 +17,6 @@ github-key.pub
 clean-polyp.py
 mask-check.py
 polyp-analyze.py
+
+# HPC
+slrum-commands.txt

@@ -7,15 +7,13 @@ import mlflow
 import yaml
 
 
-EXPERIMENTS_CSV_PATH          = Path("experiments/experiments_rgb.csv")
+EXPERIMENTS_CSV_PATH          = Path("experiments/experiments.csv")
 EXPERIMENTS_CONFIGS_DIRECTORY = Path("experiments/configs")
 
 CSV_COLUMN_HEADERS = [
-    "run_id", "date", "dataset", "seeds_run",
-    "encoder_channels", "bottleneck_channels", "input_channels", "kernel_size",
-    "normalization", "use_residual_connections", "use_attention_gates", "upsampling_mode",
-    "use_color_input", "learning_rate", "weight_decay", "batch_size", "epochs",
-    "mean_val_dice", "std_val_dice", "hypothesis", "notes", "interpretation"
+    "run_id", "date", "dataset",
+    "mean_val_dice", "std_val_dice",
+    "hypothesis", "notes", "interpretation"
 ]
 
 
@@ -85,39 +83,25 @@ class ExperimentLogger:
         mlflow.end_run()
 
         self._save_frozen_config_snapshot_to_yaml()
-        self._append_experiment_row_to_csv(mean_validation_dice, std_validation_dice, seeds_run)
+        self._append_experiment_row_to_csv(mean_validation_dice, std_validation_dice)
 
-        print(f"\nExperiment {self.run_id} complete | mean_val_dice={mean_validation_dice:.4f} ± {std_validation_dice:.4f} over seeds {seeds_run}")
+        print(f"\nExperiment {self.run_id} complete | mean_val_dice={mean_validation_dice:.4f} ± {std_validation_dice:.4f}")
 
     def _save_frozen_config_snapshot_to_yaml(self):
         frozen_config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
         with open(frozen_config_path, "w") as yaml_file:
             yaml.dump(self.full_config, yaml_file, default_flow_style=False)
 
-    def _append_experiment_row_to_csv(self, mean_validation_dice, std_validation_dice, seeds_run):
+    def _append_experiment_row_to_csv(self, mean_validation_dice, std_validation_dice):
         row = {
-            "run_id":                   self.run_id,
-            "date":                     str(date.today()),
-            "dataset":                  self.training_config["dataset"],
-            "seeds_run":                str(seeds_run),
-            "encoder_channels":         str(self.architecture_config["encoder_channels"]),
-            "bottleneck_channels":      self.architecture_config["bottleneck_channels"],
-            "input_channels":           self.architecture_config.get("input_channels", 1),
-            "kernel_size":              self.architecture_config["kernel_size"],
-            "normalization":            self.architecture_config["normalization"],
-            "use_residual_connections": self.architecture_config["use_residual_connections"],
-            "use_attention_gates":      self.architecture_config["use_attention_gates"],
-            "upsampling_mode":          self.architecture_config["upsampling_mode"],
-            "use_color_input":          self.training_config.get("use_color_input", False),
-            "learning_rate":            self.training_config["learning_rate"],
-            "weight_decay":             self.training_config["weight_decay"],
-            "batch_size":               self.training_config["batch_size"],
-            "epochs":                   self.training_config["epochs"],
-            "mean_val_dice":            round(mean_validation_dice, 4),
-            "std_val_dice":             round(std_validation_dice, 4),
-            "hypothesis":               self.training_config["hypothesis"],
-            "notes":                    self.training_config.get("notes", ""),
-            "interpretation":           "",
+            "run_id":         self.run_id,
+            "date":           str(date.today()),
+            "dataset":        self.training_config["dataset"],
+            "mean_val_dice":  round(mean_validation_dice, 4),
+            "std_val_dice":   round(std_validation_dice, 4),
+            "hypothesis":     self.training_config["hypothesis"],
+            "notes":          self.training_config.get("notes", ""),
+            "interpretation": "",
         }
         with open(EXPERIMENTS_CSV_PATH, "a", newline="") as csv_file:
             csv.DictWriter(csv_file, fieldnames=CSV_COLUMN_HEADERS).writerow(row)

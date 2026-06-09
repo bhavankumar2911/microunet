@@ -73,7 +73,9 @@ def run_single_seed(full_config, seed, device, experiment_logger):
         validation_dataloader=validation_dataloader,
         training_config=full_config["training"],
         device=device,
-        mlflow_logger=experiment_logger
+        mlflow_logger=experiment_logger,
+        run_id=experiment_logger.run_id,
+        seed=seed
     )
 
     save_trained_model_to_pickle(model, experiment_logger.run_id, seed)
