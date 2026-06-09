@@ -22,23 +22,39 @@ def build_activation_layer(activation_type):
         return nn.GELU()
 
 
+def build_standard_or_depthwise_separable_convolution_layer(input_channels, output_channels, kernel_size, padding, use_depthwise_separable):
+    if not use_depthwise_separable:
+        return nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, padding=padding, bias=False)
+    return nn.Sequential(
+        nn.Conv2d(input_channels, input_channels, kernel_size=kernel_size, padding=padding, groups=input_channels, bias=False),
+        nn.Conv2d(input_channels, output_channels, kernel_size=1, bias=False)
+    )
+
+
 class ConvolutionBlock(nn.Module):
-    def __init__(self, input_channels, output_channels, architecture_config):
+    def __init__(self, input_channels, output_channels, architecture_config, force_standard_convolution_for_first_layer=False):
         super().__init__()
 
-        normalization_type = architecture_config["normalization"]
-        group_norm_groups  = architecture_config["group_norm_num_groups"]
-        activation_type    = architecture_config["activation"]
-        kernel_size        = architecture_config["kernel_size"]
-        same_size_padding  = kernel_size // 2
+        normalization_type    = architecture_config["normalization"]
+        group_norm_groups     = architecture_config["group_norm_num_groups"]
+        activation_type       = architecture_config["activation"]
+        kernel_size           = architecture_config["kernel_size"]
+        same_size_padding     = kernel_size // 2
+        use_depthwise_separable = architecture_config.get("use_depthwise_separable_convolutions", False)
 
         self.apply_residual_connection = architecture_config["use_residual_connections"]
 
         self.double_convolution_with_norm_and_activation = nn.Sequential(
-            nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, padding=same_size_padding, bias=False),
+            build_standard_or_depthwise_separable_convolution_layer(
+                input_channels, output_channels, kernel_size, same_size_padding,
+                use_depthwise_separable and not force_standard_convolution_for_first_layer
+            ),
             build_normalization_layer(normalization_type, output_channels, group_norm_groups),
             build_activation_layer(activation_type),
-            nn.Conv2d(output_channels, output_channels, kernel_size=kernel_size, padding=same_size_padding, bias=False),
+            build_standard_or_depthwise_separable_convolution_layer(
+                output_channels, output_channels, kernel_size, same_size_padding,
+                use_depthwise_separable
+            ),
             build_normalization_layer(normalization_type, output_channels, group_norm_groups),
             build_activation_layer(activation_type),
         )
@@ -59,9 +75,9 @@ class AttentionGate(nn.Module):
     def __init__(self, skip_channels, gate_channels, intermediate_channels=16):
         super().__init__()
 
-        self.project_gating_signal_to_intermediate  = nn.Conv2d(gate_channels,  intermediate_channels, kernel_size=1, bias=False)
-        self.project_skip_features_to_intermediate  = nn.Conv2d(skip_channels,  intermediate_channels, kernel_size=1, bias=False)
-        self.collapse_intermediate_to_attention_map = nn.Conv2d(intermediate_channels, 1,               kernel_size=1, bias=False)
+        self.project_gating_signal_to_intermediate  = nn.Conv2d(gate_channels,          intermediate_channels, kernel_size=1, bias=False)
+        self.project_skip_features_to_intermediate  = nn.Conv2d(skip_channels,          intermediate_channels, kernel_size=1, bias=False)
+        self.collapse_intermediate_to_attention_map = nn.Conv2d(intermediate_channels,  1,                     kernel_size=1, bias=False)
 
     def forward(self, skip_features, gating_signal):
         gating_projected = self.project_gating_signal_to_intermediate(gating_signal)
@@ -81,9 +97,9 @@ class AttentionGate(nn.Module):
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, input_channels, output_channels, architecture_config):
+    def __init__(self, input_channels, output_channels, architecture_config, force_standard_convolution_for_first_layer=False):
         super().__init__()
-        self.convolution_block   = ConvolutionBlock(input_channels, output_channels, architecture_config)
+        self.convolution_block   = ConvolutionBlock(input_channels, output_channels, architecture_config, force_standard_convolution_for_first_layer)
         self.spatial_downsampler = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, input_tensor):
@@ -145,15 +161,16 @@ class MicroUNet(nn.Module):
         bottleneck_channel_size = architecture_config["bottleneck_channels"]
         input_channels          = architecture_config.get("input_channels", 1)
 
-        self.encoder_blocks = nn.ModuleList()
+        self.encoder_blocks   = nn.ModuleList()
         current_channel_count = input_channels
-        for encoder_output_channels in encoder_channel_sizes:
-            self.encoder_blocks.append(EncoderBlock(current_channel_count, encoder_output_channels, architecture_config))
+        for index, encoder_output_channels in enumerate(encoder_channel_sizes):
+            is_first_encoder_block = (index == 0)
+            self.encoder_blocks.append(EncoderBlock(current_channel_count, encoder_output_channels, architecture_config, force_standard_convolution_for_first_layer=is_first_encoder_block))
             current_channel_count = encoder_output_channels
 
         self.bottleneck_convolution_block = ConvolutionBlock(current_channel_count, bottleneck_channel_size, architecture_config)
 
-        self.decoder_blocks = nn.ModuleList()
+        self.decoder_blocks         = nn.ModuleList()
         decoder_input_channel_count = bottleneck_channel_size
         for decoder_output_channels in reversed(encoder_channel_sizes):
             self.decoder_blocks.append(DecoderBlock(decoder_input_channel_count, decoder_output_channels, architecture_config))

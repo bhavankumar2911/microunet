@@ -10,6 +10,7 @@ architecture:
   use_attention_gates: false
   dropout_probability: 0.0
   input_channels: 3
+  use_depthwise_separable_convolutions: false
 
 training:
   data_root: data/Polyp
