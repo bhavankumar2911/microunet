@@ -8,3 +8,4 @@ run_id,date,dataset,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
 2026_06_11_17_07_38,2026-06-11,BAGLS,0.8641,0.0071,Depth-wise separable layers does not lose much in Dice.,comparing standard conv with bagls.,
 2026_06_11_20_42_55,2026-06-11,BAGLS,0.4618,0.0286,Depth-wise separable layers does not lose much in Dice.,comparing depth-wise separable conv with bagls + no batch_norm,Without batch normalization and DS conv.
 2026_06_12_04_45_42,2026-06-12,BAGLS,0.9235,0.0034,Depth-wise separable layers does not lose much in Dice.,comparing depth-wise separable conv with bagls.,Dice score has significantly increased after adding one more encoder block even with depth-wise separable convolution as mentioned in the paper.
+2026_06_12_16_29_37,2026-06-12,EMSegmentation,0.1667,0.0317,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 4 blocks, Validation dice hits a plateau so overfit check is discarding the training.
