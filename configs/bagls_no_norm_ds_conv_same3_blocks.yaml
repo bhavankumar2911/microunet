@@ -1,0 +1,26 @@
+architecture:
+  encoder_channels: [8, 16, 32]
+  bottleneck_channels: 32
+  kernel_size: 3
+  normalization: none
+  group_norm_num_groups: 8
+  activation: relu
+  upsampling_mode: bilinear
+  use_residual_connections: false
+  use_attention_gates: false
+  dropout_probability: 0.0
+  input_channels: 1
+  use_depthwise_separable_convolutions: true
+
+training:
+  data_root: data/bagls
+  learning_rate: 0.001
+  weight_decay: 1e-4
+  batch_size: 64
+  epochs: 100
+  dataset: BAGLS
+  image_size: 256
+  max_samples: 20000
+  use_color_input: false
+  hypothesis: "Depth-wise separable layers does not lose much in Dice."
+  notes: "no batch norm + ds + same blocks"

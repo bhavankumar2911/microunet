@@ -1,6 +1,6 @@
 architecture:
-  encoder_channels: [8, 16, 32]
-  bottleneck_channels: 32
+  encoder_channels: [8, 16, 32, 64]
+  bottleneck_channels: 128
   kernel_size: 3
   normalization: none
   group_norm_num_groups: 8
@@ -9,18 +9,18 @@ architecture:
   use_residual_connections: false
   use_attention_gates: false
   dropout_probability: 0.0
-  input_channels: 3
-  use_depthwise_separable_convolutions: false
+  input_channels: 1
+  use_depthwise_separable_convolutions: true
 
 training:
-  data_root: data/Polyp
+  data_root: data/bagls
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
-  epochs: 60
-  dataset: Polyp
+  epochs: 100
+  dataset: BAGLS
   image_size: 256
-  # max_samples: none
-  use_color_input: true
-  hypothesis: "Batch Normalization makes the learning stable."
-  notes: "More Epochs for Polyp dataset to check if Dice improves."
+  max_samples: 5000
+  use_color_input: false
+  hypothesis: "Depth-wise separable layers does not lose much in Dice."
+  notes: "comparing depth-wise separable conv with bagls."
