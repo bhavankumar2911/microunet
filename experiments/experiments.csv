@@ -1,4 +1,6 @@
 run_id,date,dataset,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
+2026_06_09_22_19_56,2026-06-10,Polyp,0.127,0.1151,Batch Normalization makes the learning stable.,More Epochs for Polyp dataset to check if Dice improves.,
+run_id,date,dataset,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
 2026_06_10_18_54_28,2026-06-10,EMSegmentation,0.3346,0.0046,Depth-wise separable layers does not lose much in Dice.,Trying out Depth-wise separable layers from the Paper for EMSegmentation dataset.,
 2026_06_10_19_47_20,2026-06-10,EMSegmentation,0.8677,0.0126,Depth-wise separable layers does not lose much in Dice.,Disabling depth-wise separable layers as Dice was bad and comparing.,
 2026_06_11_00_11_32,2026-06-11,BAGLS,0.8604,0.0035,Depth-wise separable layers does not lose much in Dice.,comparing standard conv with bagls.,
