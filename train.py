@@ -1,3 +1,4 @@
+import copy
 import pickle
 from pathlib import Path
 
@@ -98,7 +99,8 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
     training_log_file_path = training_logs_directory / f"{run_id}_seed{seed}_training_log.txt"
     training_log_file = open(training_log_file_path, "w")
 
-    best_validation_dice_score = 0.0
+    best_validation_dice_score  = 0.0
+    best_model_weights          = copy.deepcopy(model.state_dict())
 
     for epoch in tqdm(range(1, training_config["epochs"] + 1), desc="Epochs"):
         training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device)
@@ -114,6 +116,7 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
 
         if validation_dice_score > best_validation_dice_score:
             best_validation_dice_score = validation_dice_score
+            best_model_weights         = copy.deepcopy(model.state_dict())
 
         validation_dice_plateau_stopper.register_epoch_validation_dice(validation_dice_score)
 
@@ -129,6 +132,7 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
             training_log_file.flush()
             break
 
+    model.load_state_dict(best_model_weights)
     training_log_file.close()
     return best_validation_dice_score
 

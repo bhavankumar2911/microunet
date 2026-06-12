@@ -10,19 +10,19 @@ architecture:
   use_attention_gates: false
   dropout_probability: 0.0
   input_channels: 1
-  use_depthwise_separable_convolutions: true
+  use_depthwise_separable_convolutions: false
 
 training:
-  data_root: data/bagls
+  data_root: data/EMSegmentation
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
   epochs: 100
-  dataset: BAGLS
+  dataset: EMSegmentation
   image_size: 256
-  max_samples: 20000
+  # max_samples: 20000
   use_color_input: false
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
   hypothesis: "Depth-wise separable layers does not lose much in Dice."
-  notes: "bagls + no norm + ds conv 3 blocks"
+  notes: "emseg + no norm + standard conv 3 blocks"
