@@ -22,5 +22,7 @@ training:
   image_size: 256
   max_samples: 20000
   use_color_input: false
+  early_stopping_patience: 10
+  early_stopping_minimum_improvement_delta: 0.001
   hypothesis: "Depth-wise separable layers does not lose much in Dice."
   notes: "using standard conv and batch norm."
