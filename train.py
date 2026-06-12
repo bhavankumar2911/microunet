@@ -63,26 +63,22 @@ def run_single_validation_epoch(model, validation_dataloader, device):
     return accumulated_loss / len(validation_dataloader), accumulated_dice_score / len(validation_dataloader)
 
 
-class OverfittingDetectionStopper:
-    def __init__(self, patience):
-        self.patience                                            = patience
-        self.previous_validation_loss                           = None
-        self.previous_training_loss                             = None
-        self.consecutive_epochs_with_widening_generalization_gap = 0
+class ValidationDicePlateauStopper:
+    def __init__(self, patience, minimum_improvement_delta):
+        self.patience                              = patience
+        self.minimum_improvement_delta             = minimum_improvement_delta
+        self.best_validation_dice_score_seen       = 0.0
+        self.epochs_without_meaningful_improvement = 0
 
-    def register_epoch_losses(self, current_training_loss, current_validation_loss):
-        if self.previous_validation_loss is not None and self.previous_training_loss is not None:
-            validation_loss_is_increasing = current_validation_loss > self.previous_validation_loss
-            training_loss_is_decreasing   = current_training_loss  < self.previous_training_loss
-            if validation_loss_is_increasing and training_loss_is_decreasing:
-                self.consecutive_epochs_with_widening_generalization_gap += 1
-            else:
-                self.consecutive_epochs_with_widening_generalization_gap = 0
-        self.previous_validation_loss = current_validation_loss
-        self.previous_training_loss   = current_training_loss
+    def register_epoch_validation_dice(self, current_validation_dice_score):
+        if current_validation_dice_score > self.best_validation_dice_score_seen + self.minimum_improvement_delta:
+            self.best_validation_dice_score_seen       = current_validation_dice_score
+            self.epochs_without_meaningful_improvement = 0
+        else:
+            self.epochs_without_meaningful_improvement += 1
 
-    def overfitting_has_been_detected(self):
-        return self.consecutive_epochs_with_widening_generalization_gap >= self.patience
+    def improvement_has_plateaued(self):
+        return self.epochs_without_meaningful_improvement >= self.patience
 
 
 def train_model(model, training_dataloader, validation_dataloader, training_config, device, mlflow_logger=None, run_id=None, seed=None):
@@ -92,8 +88,9 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
         weight_decay=training_config["weight_decay"]
     )
 
-    overfitting_detection_stopper = OverfittingDetectionStopper(
-        patience=training_config.get("early_stopping_patience", 5)
+    validation_dice_plateau_stopper = ValidationDicePlateauStopper(
+        patience=training_config.get("early_stopping_patience", 10),
+        minimum_improvement_delta=training_config.get("early_stopping_minimum_improvement_delta", 0.001)
     )
 
     training_logs_directory = Path("experiments/logs")
@@ -118,10 +115,15 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
         if validation_dice_score > best_validation_dice_score:
             best_validation_dice_score = validation_dice_score
 
-        overfitting_detection_stopper.register_epoch_losses(training_loss, validation_loss)
+        validation_dice_plateau_stopper.register_epoch_validation_dice(validation_dice_score)
 
-        if overfitting_detection_stopper.overfitting_has_been_detected():
-            early_stopping_message = f"Early stopping at epoch {epoch}: validation loss widened away from training loss for {overfitting_detection_stopper.patience} consecutive epochs."
+        if validation_dice_plateau_stopper.improvement_has_plateaued():
+            early_stopping_message = (
+                f"Early stopping at epoch {epoch}: "
+                f"validation Dice has not improved beyond {validation_dice_plateau_stopper.best_validation_dice_score_seen:.4f} "
+                f"by more than {validation_dice_plateau_stopper.minimum_improvement_delta:.4f} "
+                f"for {validation_dice_plateau_stopper.patience} consecutive epochs."
+            )
             tqdm.write(early_stopping_message)
             training_log_file.write(early_stopping_message + "\n")
             training_log_file.flush()
