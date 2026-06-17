@@ -81,7 +81,7 @@ def run_single_seed(full_config, seed, device, experiment_logger):
     save_trained_model_to_pickle(model, experiment_logger.run_id, seed)
     experiment_logger.finish_seed_run(best_validation_dice_score)
 
-    return best_validation_dice_score
+    return best_validation_dice_score, model.count_trainable_parameters()
 
 
 def main():
@@ -103,12 +103,13 @@ def main():
     experiment_logger.start_experiment()
 
     all_validation_dice_scores = []
+    num_trainable_parameters   = None
 
     for seed in seeds_to_run:
-        validation_dice_score = run_single_seed(full_config, seed, device, experiment_logger)
+        validation_dice_score, num_trainable_parameters = run_single_seed(full_config, seed, device, experiment_logger)
         all_validation_dice_scores.append(validation_dice_score)
 
-    experiment_logger.finish_experiment(all_validation_dice_scores, seeds_to_run)
+    experiment_logger.finish_experiment(all_validation_dice_scores, seeds_to_run, num_trainable_parameters)
 
 
 if __name__ == "__main__":

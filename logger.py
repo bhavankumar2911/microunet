@@ -11,7 +11,7 @@ EXPERIMENTS_CSV_PATH          = Path("experiments/experiments.csv")
 EXPERIMENTS_CONFIGS_DIRECTORY = Path("experiments/configs")
 
 CSV_COLUMN_HEADERS = [
-    "run_id", "date", "dataset",
+    "run_id", "date", "dataset", "parameters",
     "mean_val_dice", "std_val_dice",
     "hypothesis", "notes", "interpretation"
 ]
@@ -72,31 +72,33 @@ class ExperimentLogger:
         mlflow.log_metric("best_validation_dice_score", best_validation_dice_score)
         mlflow.end_run()
 
-    def finish_experiment(self, all_validation_dice_scores, seeds_run):
+    def finish_experiment(self, all_validation_dice_scores, seeds_run, num_trainable_parameters):
         mean_validation_dice = statistics.mean(all_validation_dice_scores)
         std_validation_dice  = statistics.stdev(all_validation_dice_scores) if len(all_validation_dice_scores) > 1 else 0.0
 
         mlflow.log_metrics({
             "mean_val_dice": mean_validation_dice,
             "std_val_dice":  std_validation_dice,
+            "num_trainable_parameters": num_trainable_parameters,
         })
         mlflow.end_run()
 
         self._save_frozen_config_snapshot_to_yaml()
-        self._append_experiment_row_to_csv(mean_validation_dice, std_validation_dice)
+        self._append_experiment_row_to_csv(mean_validation_dice, std_validation_dice, num_trainable_parameters)
 
-        print(f"\nExperiment {self.run_id} complete | mean_val_dice={mean_validation_dice:.4f} ± {std_validation_dice:.4f}")
+        print(f"\nExperiment {self.run_id} complete | mean_val_dice={mean_validation_dice:.4f} ± {std_validation_dice:.4f} | parameters={num_trainable_parameters:,}")
 
     def _save_frozen_config_snapshot_to_yaml(self):
         frozen_config_path = EXPERIMENTS_CONFIGS_DIRECTORY / f"config_{self.run_id}.yaml"
         with open(frozen_config_path, "w") as yaml_file:
             yaml.dump(self.full_config, yaml_file, default_flow_style=False)
 
-    def _append_experiment_row_to_csv(self, mean_validation_dice, std_validation_dice):
+    def _append_experiment_row_to_csv(self, mean_validation_dice, std_validation_dice, num_trainable_parameters):
         row = {
             "run_id":         self.run_id,
             "date":           str(date.today()),
             "dataset":        self.training_config["dataset"],
+            "parameters":     num_trainable_parameters,
             "mean_val_dice":  round(mean_validation_dice, 4),
             "std_val_dice":   round(std_validation_dice, 4),
             "hypothesis":     self.training_config["hypothesis"],

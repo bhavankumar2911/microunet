@@ -1,16 +1,7 @@
-run_id,date,dataset,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
-2026_06_09_22_19_56,2026-06-10,Polyp,0.127,0.1151,Batch Normalization makes the learning stable.,More Epochs for Polyp dataset to check if Dice improves.,
-run_id,date,dataset,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
-2026_06_10_18_54_28,2026-06-10,EMSegmentation,0.3346,0.0046,Depth-wise separable layers does not lose much in Dice.,Trying out Depth-wise separable layers from the Paper for EMSegmentation dataset.,
-2026_06_10_19_47_20,2026-06-10,EMSegmentation,0.8677,0.0126,Depth-wise separable layers does not lose much in Dice.,Disabling depth-wise separable layers as Dice was bad and comparing.,
-2026_06_11_00_11_32,2026-06-11,BAGLS,0.8604,0.0035,Depth-wise separable layers does not lose much in Dice.,comparing standard conv with bagls.,
-2026_06_11_00_11_32,2026-06-11,BAGLS,0.4929,0.0156,Depth-wise separable layers does not lose much in Dice.,comparing depth-wise separable conv with bagls.,
-2026_06_11_17_07_38,2026-06-11,BAGLS,0.8641,0.0071,Depth-wise separable layers does not lose much in Dice.,comparing standard conv with bagls.,
-2026_06_11_20_42_55,2026-06-11,BAGLS,0.4618,0.0286,Depth-wise separable layers does not lose much in Dice.,comparing depth-wise separable conv with bagls + no batch_norm,Without batch normalization and DS conv.
-2026_06_12_04_45_42,2026-06-12,BAGLS,0.9235,0.0034,Depth-wise separable layers does not lose much in Dice.,comparing depth-wise separable conv with bagls.,Dice score has significantly increased after adding one more encoder block even with depth-wise separable convolution as mentioned in the paper.
-2026_06_12_16_29_37,2026-06-12,EMSegmentation,0.1667,0.0317,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 4 blocks, Validation dice hits a plateau so overfit check is discarding the training.
-2026_06_12_17_19_41,2026-06-12,EMSegmentation,0.8973,0.012,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 4 blocks, The depth-wise separable convolution stragegy from the paper also holds true for EMSegmentation dataset when trained with batch normalization.
-2026_06_13_12_25_23,2026-06-13,EMSegmentation,0.8602,0.0358,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + standard conv 3 blocks, Expected outcome as standard convolution has been used
-2026_06_13_12_46_19,2026-06-13,EMSegmentation,0.9153,0.005,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + standard conv 3 blocks, 5% increase in Dice with batch normalization and standard conv
-2026_06_13_12_59_21,2026-06-13,EMSegmentation,0.1756,0.0,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 3 blocks, Very bad dice for depth-wise separable without batch normalization.
-2026_06_13_13_07_04,2026-06-13,EMSegmentation,0.8592,0.0144,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks, when batch normalization is introduced with depth-wise separable convolution Dice is good once again.
+run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,interpretation
+2026_06_12_16_29_37,2026-06-12,EMSegmentation,45481,0.1667,0.0317,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 4 blocks, Validation dice hits a plateau so overfit check is discarding the training.
+2026_06_12_17_19_41,2026-06-12,EMSegmentation,46697,0.8973,0.012,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 4 blocks, The depth-wise separable convolution stragegy from the paper also holds true for EMSegmentation dataset when trained with batch normalization.
+2026_06_13_12_25_23,2026-06-13,EMSegmentation,74321,0.8602,0.0358,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + standard conv 3 blocks, Expected outcome as standard convolution has been used
+2026_06_13_12_46_19,2026-06-13,EMSegmentation,74897,0.9153,0.005,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + standard conv 3 blocks, 5% increase in Dice with batch normalization and standard conv
+2026_06_13_12_59_21,2026-06-13,EMSegmentation,12617,0.1756,0.0,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 3 blocks, Very bad dice for depth-wise separable without batch normalization.
+2026_06_13_13_07_04,2026-06-13,EMSegmentation,13193,0.8592,0.0144,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks, when batch normalization is introduced with depth-wise separable convolution Dice is good once again.
