@@ -26,7 +26,7 @@ def compute_dice_score(predicted_logits, ground_truth_masks, smoothing=1e-6):
     return ((2.0 * intersection + smoothing) / (predicted_plus_groundtruth + smoothing)).mean().item()
 
 
-def run_single_training_epoch(model, training_dataloader, optimizer, device):
+def run_single_training_epoch(model, training_dataloader, optimizer, device, cyclic_learning_rate_scheduler=None):
     model.train()
     accumulated_loss          = 0.0
     binary_cross_entropy_loss = nn.BCEWithLogitsLoss()
@@ -40,6 +40,9 @@ def run_single_training_epoch(model, training_dataloader, optimizer, device):
         combined_bce_and_dice_loss = binary_cross_entropy_loss(predicted_logits, masks) + compute_dice_loss(predicted_logits, masks)
         combined_bce_and_dice_loss.backward()
         optimizer.step()
+
+        if cyclic_learning_rate_scheduler is not None:
+            cyclic_learning_rate_scheduler.step()
 
         accumulated_loss += combined_bce_and_dice_loss.item()
 
@@ -89,6 +92,16 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
         weight_decay=training_config["weight_decay"]
     )
 
+    cyclic_learning_rate_scheduler = None
+    if training_config.get("use_cyclic_learning_rate", False):
+        cyclic_learning_rate_scheduler = torch.optim.lr_scheduler.CyclicLR(
+            optimizer,
+            base_lr=training_config.get("cyclic_learning_rate_minimum", 1e-6),
+            max_lr=training_config.get("cyclic_learning_rate_maximum", 1e-3),
+            step_size_up=len(training_dataloader) * training_config.get("cyclic_learning_rate_half_cycle_epochs", 2),
+            cycle_momentum=False
+        )
+
     validation_dice_plateau_stopper = ValidationDicePlateauStopper(
         patience=training_config.get("early_stopping_patience", 10),
         minimum_improvement_delta=training_config.get("early_stopping_minimum_improvement_delta", 0.001)
@@ -103,7 +116,7 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
     best_model_weights          = copy.deepcopy(model.state_dict())
 
     for epoch in tqdm(range(1, training_config["epochs"] + 1), desc="Epochs"):
-        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device)
+        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device, cyclic_learning_rate_scheduler)
         validation_loss, validation_dice_score = run_single_validation_epoch(model, validation_dataloader, device)
 
         epoch_message = f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {validation_dice_score:.4f}"

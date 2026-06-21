@@ -1,0 +1,30 @@
+architecture:
+  activation: relu
+  bottleneck_channels: 32
+  dropout_probability: 0.0
+  encoder_channels:
+  - 8
+  - 16
+  - 32
+  group_norm_num_groups: 8
+  input_channels: 3
+  kernel_size: 3
+  normalization: batch_norm
+  upsampling_mode: bilinear
+  use_attention_gates: false
+  use_depthwise_separable_convolutions: true
+  use_residual_connections: false
+training:
+  batch_size: 64
+  data_root: data/Polyp
+  dataset: Polyp
+  early_stopping_minimum_improvement_delta: 0.001
+  early_stopping_patience: 20
+  epochs: 200
+  hypothesis: Depth-wise separable layers does not lose much in Dice.
+  image_size: 256
+  learning_rate: 0.001
+  notes: polyp + batch norm + ds conv 3 blocks
+  seed: 44
+  use_color_input: true
+  weight_decay: 0.0001

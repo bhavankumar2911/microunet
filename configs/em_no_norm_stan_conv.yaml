@@ -4,15 +4,19 @@ architecture:
   kernel_size: 3
   normalization: none
   group_norm_num_groups: 8
-  activation: relu
-  upsampling_mode: bilinear
-  use_residual_connections: false
+  activation: h_swish
+  upsampling_mode: nearest_neighbor
+  use_residual_connections: true
   use_attention_gates: false
   dropout_probability: 0.0
   input_channels: 1
   use_depthwise_separable_convolutions: false
 
 training:
+  use_cyclic_learning_rate: true
+  cyclic_learning_rate_minimum: 1e-6
+  cyclic_learning_rate_maximum: 1e-3
+  cyclic_learning_rate_half_cycle_epochs: 2
   data_root: data/EMSegmentation
   learning_rate: 0.001
   weight_decay: 1e-4
@@ -25,4 +29,4 @@ training:
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
   hypothesis: "Depth-wise separable layers does not lose much in Dice."
-  notes: "emseg + no norm + standard conv 3 blocks"
+  notes: "emseg + no norm + standard conv 3 blocks + paper's optimization"

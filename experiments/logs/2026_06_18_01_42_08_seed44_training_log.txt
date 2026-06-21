@@ -1,0 +1,1 @@
+Epoch 001/100 | Train Loss: 1.1982 | Val Loss: 1.0548 | Val Dice: 0.6167

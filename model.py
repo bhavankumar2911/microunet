@@ -20,6 +20,8 @@ def build_activation_layer(activation_type):
         return nn.LeakyReLU(inplace=True)
     elif activation_type == "gelu":
         return nn.GELU()
+    elif activation_type == "h_swish":
+        return nn.Hardswish(inplace=True)
 
 
 def build_standard_or_depthwise_separable_convolution_layer(input_channels, output_channels, kernel_size, padding, use_depthwise_separable):
@@ -116,6 +118,11 @@ class DecoderBlock(nn.Module):
 
         if upsampling_mode == "transposed_conv":
             self.spatial_upsampler = nn.ConvTranspose2d(input_channels, output_channels, kernel_size=2, stride=2)
+        elif upsampling_mode == "nearest_neighbor":
+            self.spatial_upsampler = nn.Sequential(
+                nn.Upsample(scale_factor=2, mode="nearest"),
+                nn.Conv2d(input_channels, output_channels, kernel_size=1, bias=False)
+            )
         else:
             self.spatial_upsampler = nn.Sequential(
                 nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
