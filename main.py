@@ -34,6 +34,11 @@ def load_yaml_config(config_file_path):
     full_config["training"]["image_size"]              = int(full_config["training"]["image_size"])
     full_config["training"]["use_color_input"]         = bool(full_config["training"].get("use_color_input", False))
 
+    if "cyclic_learning_rate_minimum" in full_config["training"]:
+        full_config["training"]["cyclic_learning_rate_minimum"] = float(full_config["training"]["cyclic_learning_rate_minimum"])
+    if "cyclic_learning_rate_maximum" in full_config["training"]:
+        full_config["training"]["cyclic_learning_rate_maximum"] = float(full_config["training"]["cyclic_learning_rate_maximum"])
+
     return full_config
 
 
