@@ -29,4 +29,4 @@ training:
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
   hypothesis: "Depth-wise separable layers does not lose much in Dice."
-  notes: "emseg + batch norm + ds conv 4 blocks"
+  notes: "emseg + batch norm + ds conv 4 blocks + paper's optimization"
