@@ -37,29 +37,38 @@ class ConvolutionBlock(nn.Module):
     def __init__(self, input_channels, output_channels, architecture_config, force_standard_convolution_for_first_layer=False):
         super().__init__()
 
-        normalization_type    = architecture_config["normalization"]
-        group_norm_groups     = architecture_config["group_norm_num_groups"]
-        activation_type       = architecture_config["activation"]
-        kernel_size           = architecture_config["kernel_size"]
-        same_size_padding     = kernel_size // 2
+        normalization_type      = architecture_config["normalization"]
+        group_norm_groups       = architecture_config["group_norm_num_groups"]
+        activation_type         = architecture_config["activation"]
+        kernel_size             = architecture_config["kernel_size"]
+        same_size_padding       = kernel_size // 2
         use_depthwise_separable = architecture_config.get("use_depthwise_separable_convolutions", False)
+        use_single_convolution  = architecture_config.get("use_single_convolution_per_block", False)
 
         self.apply_residual_connection = architecture_config["use_residual_connections"]
 
-        self.double_convolution_with_norm_and_activation = nn.Sequential(
+        first_convolution_group = [
             build_standard_or_depthwise_separable_convolution_layer(
                 input_channels, output_channels, kernel_size, same_size_padding,
                 use_depthwise_separable and not force_standard_convolution_for_first_layer
             ),
             build_normalization_layer(normalization_type, output_channels, group_norm_groups),
             build_activation_layer(activation_type),
+        ]
+
+        second_convolution_group = [
             build_standard_or_depthwise_separable_convolution_layer(
                 output_channels, output_channels, kernel_size, same_size_padding,
                 use_depthwise_separable
             ),
             build_normalization_layer(normalization_type, output_channels, group_norm_groups),
             build_activation_layer(activation_type),
-        )
+        ]
+
+        if use_single_convolution:
+            self.convolution_with_norm_and_activation = nn.Sequential(*first_convolution_group)
+        else:
+            self.convolution_with_norm_and_activation = nn.Sequential(*first_convolution_group, *second_convolution_group)
 
         if self.apply_residual_connection and input_channels != output_channels:
             self.channel_matching_shortcut = nn.Conv2d(input_channels, output_channels, kernel_size=1, bias=False)
@@ -67,7 +76,7 @@ class ConvolutionBlock(nn.Module):
             self.channel_matching_shortcut = nn.Identity()
 
     def forward(self, input_tensor):
-        convolution_output = self.double_convolution_with_norm_and_activation(input_tensor)
+        convolution_output = self.convolution_with_norm_and_activation(input_tensor)
         if self.apply_residual_connection:
             return convolution_output + self.channel_matching_shortcut(input_tensor)
         return convolution_output
@@ -136,8 +145,14 @@ class DecoderBlock(nn.Module):
                 gate_channels=input_channels
             )
 
-        channels_after_concatenating_upsampled_and_skip = 2 * output_channels
-        self.convolution_block = ConvolutionBlock(channels_after_concatenating_upsampled_and_skip, output_channels, architecture_config)
+        self.skip_connection_mode = architecture_config.get("skip_connection_mode", "concatenate")
+
+        if self.skip_connection_mode == "add":
+            channels_entering_convolution_block = output_channels
+        else:
+            channels_entering_convolution_block = 2 * output_channels
+
+        self.convolution_block = ConvolutionBlock(channels_entering_convolution_block, output_channels, architecture_config)
 
         self.dropout = nn.Dropout2d(architecture_config["dropout_probability"]) \
             if architecture_config["dropout_probability"] > 0.0 else nn.Identity()
@@ -156,8 +171,12 @@ class DecoderBlock(nn.Module):
         if self.apply_attention_gating:
             skip_connection_tensor = self.attention_gate(skip_connection_tensor, input_tensor)
 
-        concatenated_upsampled_and_skip = torch.cat([upsampled_features, skip_connection_tensor], dim=1)
-        return self.dropout(self.convolution_block(concatenated_upsampled_and_skip))
+        if self.skip_connection_mode == "add":
+            merged_upsampled_and_skip = upsampled_features + skip_connection_tensor
+        else:
+            merged_upsampled_and_skip = torch.cat([upsampled_features, skip_connection_tensor], dim=1)
+
+        return self.dropout(self.convolution_block(merged_upsampled_and_skip))
 
 
 class MicroUNet(nn.Module):
