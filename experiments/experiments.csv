@@ -4,7 +4,7 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_06_13_12_25_23,2026-06-13,EMSegmentation,74321,0.8602,0.0358,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + standard conv 3 blocks, Expected outcome as standard convolution has been used
 2026_06_13_12_46_19,2026-06-13,EMSegmentation,74897,0.9153,0.005,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + standard conv 3 blocks, 5% increase in Dice with batch normalization and standard conv
 2026_06_13_12_59_21,2026-06-13,EMSegmentation,12617,0.1756,0.0,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 3 blocks, Very bad dice for depth-wise separable without batch normalization.
-2026_06_13_13_07_04,2026-06-13,EMSegmentation,13193,0.8592,0.0144,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks, when batch normalization is introduced with depth-wise separable convolution Dice is good once again.
+2026_06_13_13_07_04,2026-06-13,EMSegmentation,13193,0.8592,0.0144,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks,The depth-wise separable convolution from the paper did a good job in reducing the parameter count significantly while yielding a comparable dice score by standard convolution given batch normalization is used.
 2026_06_17_23_16_07,2026-06-18,Polyp,74321,0.3921,0.3396,Depth-wise separable layers does not lose much in Dice.,polyp + no norm + standard conv 3 blocks,
 2026_06_18_00_15_42,2026-06-18,Polyp,74897,0.6433,0.0154,Depth-wise separable layers does not lose much in Dice.,polyp + batch norm + standard conv 3 blocks,
 2026_06_18_01_01_14,2026-06-18,Polyp,12617,0.1273,0.1175,Depth-wise separable layers does not lose much in Dice.,polyp + no norm + ds conv 3 blocks,
@@ -29,7 +29,7 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_06_21_00_05_55,2026-06-21,Polyp,12761,0.127,0.1151,Depth-wise separable layers does not lose much in Dice.,polyp + no norm + ds conv 3 blocks,
 2026_06_21_00_40_12,2026-06-21,Polyp,74465,0.6406,0.0146,Depth-wise separable layers does not lose much in Dice.,polyp + no norm + standard conv 3 blocks,
 2026_06_22_00_18_19,2026-06-22,EMSegmentation,60273,0.8892,0.0062,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 4 blocks + paper's optimization,
-2026_06_22_00_34_09,2026-06-22,EMSegmentation,16529,0.8401,0.0139,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks + paper's optimization,
+2026_06_22_00_34_09,2026-06-22,EMSegmentation,16529,0.8401,0.0139,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + ds conv 3 blocks + paper's optimization,Using residual connections increased the parameter count while losing in Dice.
 2026_06_22_00_55_55,2026-06-22,EMSegmentation,78233,0.8739,0.0112,Depth-wise separable layers does not lose much in Dice.,emseg + batch norm + standard conv 3 blocks + paper's optimization,
 2026_06_22_01_08_54,2026-06-22,EMSegmentation,59057,0.7663,0.0157,Depth-wise separable layers does not lose much in Dice.,emseg + no norm + ds conv 4 blocks + paper's optimization,
 2026_06_21_20_25_16,2026-06-22,BAGLS,12617,0.6445,0.0202,Depth-wise separable layers does not lose much in Dice.,bagls + no norm + ds conv 3 blocks,

@@ -6,7 +6,7 @@ architecture:
   group_norm_num_groups: 8
   activation: h_swish
   upsampling_mode: nearest_neighbor
-  use_residual_connections: true
+  use_residual_connections: false
   use_attention_gates: false
   dropout_probability: 0.0
   input_channels: 1
@@ -31,4 +31,4 @@ training:
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
   hypothesis: "Depth-wise separable layers does not lose much in Dice."
-  notes: "emseg + no norm + ds conv 4 blocks + paper's optimization"
+  notes: "emseg + no norm + ds conv 4 blocks + paper's optimization(without residual connection)"
