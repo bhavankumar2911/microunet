@@ -4,15 +4,15 @@ architecture:
   kernel_size: 3
   normalization: 'batch_norm'
   group_norm_num_groups: 8
-  activation: relu
+  activation: h_swish
   upsampling_mode: nearest_neighbor
   use_residual_connections: false
-  use_attention_gates: false
+  use_attention_gates: true
   dropout_probability: 0.0
   input_channels: 1
   use_depthwise_separable_convolutions: true
   use_single_convolution_per_block: false
-  skip_connection_mode: concate
+  skip_connection_mode: add
 
 training:
   use_cyclic_learning_rate: false
@@ -30,5 +30,5 @@ training:
   use_color_input: false
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
-  hypothesis: "Batch normalization vs Residual Connections."
-  notes: "emseg + batch norm + ds conv 4 blocks + no residual"
+  hypothesis: "Attention gates improves dice."
+  notes: "emseg + batch norm + ds conv 4 blocks + no residual + swish + add skip connection + attention gates"
