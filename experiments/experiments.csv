@@ -64,3 +64,4 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_06_25_15_44_18,2026-06-25,EMSegmentation,44977,0.9171,0.0069,Attention gates improves dice.,emseg + batch norm + ds conv 4 blocks + no residual + swish + add skip connection + attention gates,
 2026_06_25_15_57_55,2026-06-25,EMSegmentation,13569,0.8674,0.0121,Attention gates improves dice.,emseg + batch norm + ds conv 3 blocks + no residual + swish + add skip connection + attention gates,
 2026_06_25_18_15_00,2026-06-25,EMSegmentation,4257,0.7073,0.0248,Attention gates improves dice.,emseg + batch norm + ds conv 2 blocks + no residual + swish + add skip connection + attention gates,
+2026_06_26_07_56_58,2026-06-26,EMSegmentation,3329,0.7215,0.0175,Attention gates improves dice.,emseg + batch norm + ds conv 2 blocks + no residual + swish + add skip connection + no attention gates,
