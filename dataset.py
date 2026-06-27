@@ -335,10 +335,9 @@ def find_image_filepath_for_case_identifier(image_directory, case_identifier):
 class IMed361MSegmentationDataset(MultiClassSegmentationDataset):
     has_predefined_validation_split          = False
     requires_patient_grouped_validation_split = True
-    imed361m_dataset_folder_name             = None
 
     def __init__(self, root_directory, image_size, split="training", use_color_input=False):
-        dataset_directory        = Path(root_directory) / self.imed361m_dataset_folder_name
+        dataset_directory        = Path(root_directory)
         self.image_directory     = dataset_directory / "image"
         self.all_label_filepaths = sorted((dataset_directory / "label").glob("*.npz"))
         self.patient_grouping_keys = [
@@ -375,12 +374,10 @@ class IMed361MSegmentationDataset(MultiClassSegmentationDataset):
 
 class ChaosAbdominalOrganSegmentationDataset(IMed361MSegmentationDataset):
     number_of_segmentation_classes = 5
-    imed361m_dataset_folder_name   = "CHAOS_Task_4_t1"
 
 
 class AutomatedCardiacDiagnosisSegmentationDataset(IMed361MSegmentationDataset):
     number_of_segmentation_classes = 4
-    imed361m_dataset_folder_name   = "ACDC"
 
     @staticmethod
     def extract_patient_grouping_key_from_case_identifier(case_identifier):
@@ -392,7 +389,6 @@ class AutomatedCardiacDiagnosisSegmentationDataset(IMed361MSegmentationDataset):
 
 class MultiModalityWholeHeartSegmentationDataset(IMed361MSegmentationDataset):
     number_of_segmentation_classes = 8
-    imed361m_dataset_folder_name   = "MMWHS_MR"
 
 
 DATASET_REGISTRY = {
