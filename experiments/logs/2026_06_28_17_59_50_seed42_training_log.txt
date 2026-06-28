@@ -29,3 +29,6 @@ Epoch 028/100 | Train Loss: 0.5474 | Val Loss: 0.7389 | Val Dice: 0.6110
 Epoch 029/100 | Train Loss: 0.5357 | Val Loss: 0.7598 | Val Dice: 0.6222
 Epoch 030/100 | Train Loss: 0.5303 | Val Loss: 0.7461 | Val Dice: 0.6051
 Epoch 031/100 | Train Loss: 0.5249 | Val Loss: 0.7374 | Val Dice: 0.6428
+Epoch 032/100 | Train Loss: 0.5193 | Val Loss: 0.7360 | Val Dice: 0.6027
+Epoch 033/100 | Train Loss: 0.5172 | Val Loss: 0.7324 | Val Dice: 0.5907
+Early stopping at epoch 33: validation Dice has not improved beyond 0.6425 by more than 0.0010 for 10 consecutive epochs.
