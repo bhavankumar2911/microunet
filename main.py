@@ -11,10 +11,10 @@ import numpy as np
 import torch
 import yaml
 
-from dataset import create_train_val_dataloaders
+from dataset import create_train_val_dataloaders, resolve_dataset_class_from_registry
 from logger import ExperimentLogger, generate_next_run_id
 from model import build_model
-from train import train_model, save_trained_model_to_pickle
+from train import build_segmentation_objective, save_trained_model_to_pickle, train_model
 
 
 FIXED_SEED_POOL = [42, 43, 44, 123, 456, 789, 1337, 2024, 31415, 99999]
@@ -49,6 +49,10 @@ def seed_all_random_number_generators(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark     = False
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
 
 def parse_command_line_arguments():
     argument_parser = argparse.ArgumentParser(description="MicroUNet experiment runner")
@@ -63,12 +67,20 @@ def run_single_seed(full_config, seed, device, experiment_logger):
 
     print(f"\n--- Seed {seed} ---")
 
+    dataset_class = resolve_dataset_class_from_registry(full_config["training"]["dataset"])
+
     training_dataloader, validation_dataloader = create_train_val_dataloaders(
         root_directory=full_config["training"]["data_root"],
         training_config=full_config["training"]
     )
 
-    model = build_model(full_config["architecture"], device)
+    model = build_model(
+        full_config["architecture"],
+        device,
+        output_channels=dataset_class.number_of_segmentation_classes
+    )
+
+    segmentation_objective = build_segmentation_objective(dataset_class.number_of_segmentation_classes)
 
     experiment_logger.start_seed_run(seed)
 
@@ -78,6 +90,7 @@ def run_single_seed(full_config, seed, device, experiment_logger):
         validation_dataloader=validation_dataloader,
         training_config=full_config["training"],
         device=device,
+        segmentation_objective=segmentation_objective,
         mlflow_logger=experiment_logger,
         run_id=experiment_logger.run_id,
         seed=seed

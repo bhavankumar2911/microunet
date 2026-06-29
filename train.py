@@ -4,6 +4,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as functional
 from tqdm import tqdm
 
 
@@ -26,43 +27,101 @@ def compute_dice_score(predicted_logits, ground_truth_masks, smoothing=1e-6):
     return ((2.0 * intersection + smoothing) / (predicted_plus_groundtruth + smoothing)).mean().item()
 
 
-def run_single_training_epoch(model, training_dataloader, optimizer, device, cyclic_learning_rate_scheduler=None):
+def compute_multiclass_dice_loss(predicted_logits, ground_truth_class_indices, number_of_segmentation_classes, smoothing=1e-6):
+    predicted_class_probabilities = functional.softmax(predicted_logits, dim=1)
+    ground_truth_one_hot          = functional.one_hot(ground_truth_class_indices, number_of_segmentation_classes).permute(0, 3, 1, 2).float()
+
+    intersection                   = (predicted_class_probabilities * ground_truth_one_hot).sum(dim=(2, 3))
+    predicted_plus_groundtruth     = predicted_class_probabilities.sum(dim=(2, 3)) + ground_truth_one_hot.sum(dim=(2, 3))
+    dice_loss_per_class_per_sample = 1.0 - (2.0 * intersection + smoothing) / (predicted_plus_groundtruth + smoothing)
+    return dice_loss_per_class_per_sample.mean()
+
+
+def compute_multiclass_mean_dice_score(predicted_logits, ground_truth_class_indices, number_of_segmentation_classes, smoothing=1e-6):
+    predicted_class_indices = predicted_logits.argmax(dim=1)
+    per_class_dice_scores   = []
+
+    for class_index in range(number_of_segmentation_classes):
+        predicted_binary_mask      = (predicted_class_indices == class_index).float()
+        ground_truth_binary_mask   = (ground_truth_class_indices == class_index).float()
+        intersection               = (predicted_binary_mask * ground_truth_binary_mask).sum(dim=(1, 2))
+        predicted_plus_groundtruth = predicted_binary_mask.sum(dim=(1, 2)) + ground_truth_binary_mask.sum(dim=(1, 2))
+        per_class_dice_scores.append(((2.0 * intersection + smoothing) / (predicted_plus_groundtruth + smoothing)).mean())
+
+    return torch.stack(per_class_dice_scores).mean().item()
+
+
+class BinarySegmentationObjective:
+    def __init__(self):
+        self.binary_cross_entropy_loss = nn.BCEWithLogitsLoss()
+
+    def compute_training_loss(self, predicted_logits, ground_truth_masks):
+        return self.binary_cross_entropy_loss(predicted_logits, ground_truth_masks) + compute_dice_loss(predicted_logits, ground_truth_masks)
+
+    def compute_validation_loss(self, predicted_logits, ground_truth_masks):
+        return self.compute_training_loss(predicted_logits, ground_truth_masks)
+
+    def compute_validation_dice_score(self, predicted_logits, ground_truth_masks):
+        return compute_dice_score(predicted_logits, ground_truth_masks)
+
+
+class MulticlassSegmentationObjective:
+    def __init__(self, number_of_segmentation_classes):
+        self.number_of_segmentation_classes = number_of_segmentation_classes
+        self.cross_entropy_loss             = nn.CrossEntropyLoss()
+
+    def compute_training_loss(self, predicted_logits, ground_truth_class_indices):
+        return self.cross_entropy_loss(predicted_logits, ground_truth_class_indices) + \
+            compute_multiclass_dice_loss(predicted_logits, ground_truth_class_indices, self.number_of_segmentation_classes)
+
+    def compute_validation_loss(self, predicted_logits, ground_truth_class_indices):
+        return self.compute_training_loss(predicted_logits, ground_truth_class_indices)
+
+    def compute_validation_dice_score(self, predicted_logits, ground_truth_class_indices):
+        return compute_multiclass_mean_dice_score(predicted_logits, ground_truth_class_indices, self.number_of_segmentation_classes)
+
+
+def build_segmentation_objective(number_of_segmentation_classes):
+    if number_of_segmentation_classes == 1:
+        return BinarySegmentationObjective()
+    return MulticlassSegmentationObjective(number_of_segmentation_classes)
+
+
+def run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler=None):
     model.train()
-    accumulated_loss          = 0.0
-    binary_cross_entropy_loss = nn.BCEWithLogitsLoss()
+    accumulated_loss = 0.0
 
     for images, masks in tqdm(training_dataloader, desc="Training", leave=False):
         images = images.to(device)
         masks  = masks.to(device)
 
         optimizer.zero_grad()
-        predicted_logits           = model(images)
-        combined_bce_and_dice_loss = binary_cross_entropy_loss(predicted_logits, masks) + compute_dice_loss(predicted_logits, masks)
-        combined_bce_and_dice_loss.backward()
+        predicted_logits = model(images)
+        training_loss    = segmentation_objective.compute_training_loss(predicted_logits, masks)
+        training_loss.backward()
         optimizer.step()
 
         if cyclic_learning_rate_scheduler is not None:
             cyclic_learning_rate_scheduler.step()
 
-        accumulated_loss += combined_bce_and_dice_loss.item()
+        accumulated_loss += training_loss.item()
 
     return accumulated_loss / len(training_dataloader)
 
 
-def run_single_validation_epoch(model, validation_dataloader, device):
+def run_single_validation_epoch(model, validation_dataloader, device, segmentation_objective):
     model.eval()
-    accumulated_loss          = 0.0
-    accumulated_dice_score    = 0.0
-    binary_cross_entropy_loss = nn.BCEWithLogitsLoss()
+    accumulated_loss       = 0.0
+    accumulated_dice_score = 0.0
 
     with torch.no_grad():
         for images, masks in tqdm(validation_dataloader, desc="Validating", leave=False):
             images = images.to(device)
             masks  = masks.to(device)
 
-            predicted_logits       = model(images)
-            accumulated_loss      += (binary_cross_entropy_loss(predicted_logits, masks) + compute_dice_loss(predicted_logits, masks)).item()
-            accumulated_dice_score += compute_dice_score(predicted_logits, masks)
+            predicted_logits        = model(images)
+            accumulated_loss       += segmentation_objective.compute_validation_loss(predicted_logits, masks).item()
+            accumulated_dice_score += segmentation_objective.compute_validation_dice_score(predicted_logits, masks)
 
     return accumulated_loss / len(validation_dataloader), accumulated_dice_score / len(validation_dataloader)
 
@@ -85,7 +144,7 @@ class ValidationDicePlateauStopper:
         return self.epochs_without_meaningful_improvement >= self.patience
 
 
-def train_model(model, training_dataloader, validation_dataloader, training_config, device, mlflow_logger=None, run_id=None, seed=None):
+def train_model(model, training_dataloader, validation_dataloader, training_config, device, segmentation_objective, mlflow_logger=None, run_id=None, seed=None):
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=training_config["learning_rate"],
@@ -116,8 +175,8 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
     best_model_weights          = copy.deepcopy(model.state_dict())
 
     for epoch in tqdm(range(1, training_config["epochs"] + 1), desc="Epochs"):
-        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device, cyclic_learning_rate_scheduler)
-        validation_loss, validation_dice_score = run_single_validation_epoch(model, validation_dataloader, device)
+        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler)
+        validation_loss, validation_dice_score = run_single_validation_epoch(model, validation_dataloader, device, segmentation_objective)
 
         epoch_message = f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {validation_dice_score:.4f}"
         tqdm.write(epoch_message)

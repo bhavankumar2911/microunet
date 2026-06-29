@@ -229,8 +229,8 @@ class MicroUNet(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
-def build_model(architecture_config, device):
-    model                      = MicroUNet(architecture_config)
+def build_model(architecture_config, device, output_channels=1):
+    model                      = MicroUNet(architecture_config, output_channels=output_channels)
     total_trainable_parameters = model.count_trainable_parameters()
     print(f"Model: MicroUNet | Parameters: {total_trainable_parameters:,} ({total_trainable_parameters / 1e6:.4f}M)")
     assert total_trainable_parameters < 100_000, f"Model exceeds 0.1M parameter limit: {total_trainable_parameters:,}"

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/bhavankumarvelladurai/Documents/fau/ss26/bimap/microunet/mlruns/363794108990727273/0748ed56bf754716ba619b96e5f4db43/artifacts
+end_time: 1782595756460
+entry_point_name: ''
+experiment_id: '363794108990727273'
+lifecycle_stage: active
+run_id: 0748ed56bf754716ba619b96e5f4db43
+run_name: '2026_06_27_23_29_15'
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1782595756311
+status: 3
+tags: []
+user_id: vlbi111v
