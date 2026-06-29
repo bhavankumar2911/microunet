@@ -4,7 +4,7 @@
 #SBATCH --partition=rtx3080
 #SBATCH --time=00:50:00
 #SBATCH --export=NONE
-#SBATCH --job-name=reproduce_check
+#SBATCH --job-name=reproduce_check_batch-job
 
 unset SLURM_EXPORT_ENV
 
