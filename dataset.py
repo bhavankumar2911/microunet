@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from medsegbench import CellnucleiMSBench, FHPsAOPMSBench, Isic2016MSBench, NusetMSBench, USforKidneyMSBench, WbcMSBench
+from medsegbench import CellnucleiMSBench, FHPsAOPMSBench, Isic2016MSBench, NusetMSBench, USforKidneyMSBench, WbcMSBench, YeazMSBench
 from PIL import Image
 from scipy import sparse
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
@@ -298,6 +298,21 @@ class SkinLesionSegmentationDataset(MedSegBenchBinarySegmentationDataset):
         return self.underlying_medsegbench_dataset[index]
 
 
+class YeastCellSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = YeazMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
 def parse_one_hot_shape_from_label_filename(label_filepath):
     shape_string = label_filepath.name.split(".")[-2]
     return ast.literal_eval(shape_string)
@@ -391,6 +406,10 @@ class MultiModalityWholeHeartSegmentationDataset(IMed361MSegmentationDataset):
     number_of_segmentation_classes = 8
 
 
+class BeyondCranialVaultOrganSegmentationDataset(IMed361MSegmentationDataset):
+    number_of_segmentation_classes = 14
+
+
 DATASET_REGISTRY = {
     "BAGLS":          BAGLSSegmentationDataset,
     "EMSegmentation": EMSegmentationDataset,
@@ -401,9 +420,11 @@ DATASET_REGISTRY = {
     "Nuset":          CrowdedNucleiSegmentationDataset,
     "USforKidney":    KidneyUltrasoundSegmentationDataset,
     "Isic2016":       SkinLesionSegmentationDataset,
+    "Yeaz":           YeastCellSegmentationDataset,
     "Chaos":          ChaosAbdominalOrganSegmentationDataset,
     "Acdc":           AutomatedCardiacDiagnosisSegmentationDataset,
     "MmWhsMr":        MultiModalityWholeHeartSegmentationDataset,
+    "Btcv":           BeyondCranialVaultOrganSegmentationDataset,
 }
 
 
