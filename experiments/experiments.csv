@@ -171,7 +171,7 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_07_07_22_49_36,2026-07-07,FHPsAOP,96515,0.968,0.001,No hypothesis.,cyclic LR to avoid loss spikes.,
 2026_07_07_22_47_03,2026-07-07,Acdc,96524,0.8564,0.0019,No hypothesis.,cyclic LR to avoid loss spikes.,
 2026_07_07_22_48_49,2026-07-07,MmWhsMr,96560,0.636,0.0201,No hypothesis.,cyclic LR to avoid loss spikes.,
-2026_07_07_22_47_03,2026-07-07,Btcv,96614,0.604,0.0194,No hypothesis.,cyclic LR to avoid loss spikes.,
+2026_07_07_22_47_03,2026-07-07,Btcv,96614,0.604,0.0194,No hypothesis.,cyclic LR to avoid loss spikes.,Reduced the dice score badly.
 2026_07_08_09_28_48,2026-07-08,Yeaz,96497,0.9111,0.0113,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
 2026_07_08_09_27_42,2026-07-08,Isic2016,96641,0.8639,0.0136,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
 2026_07_08_09_28_41,2026-07-08,Wbc,96659,0.9452,0.0038,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
@@ -184,4 +184,4 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_07_08_09_25_01,2026-07-08,Acdc,96524,0.8619,0.0023,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
 2026_07_08_09_27_48,2026-07-08,MmWhsMr,96560,0.6706,0.0202,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
 2026_07_08_09_27_23,2026-07-08,Btcv,96614,0.6614,0.0764,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
-2026_07_08_10_20_16,2026-07-08,CellNuclei,96641,0.8469,0.037,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",
+2026_07_08_10_20_16,2026-07-08,CellNuclei,96641,0.8469,0.037,No hypothesis -  gradient clipping.,"baseline, [8,16,32]/52, standard conv, ~96.5K params",The loss spikes still exist.
