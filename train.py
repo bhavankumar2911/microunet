@@ -87,7 +87,7 @@ def build_segmentation_objective(number_of_segmentation_classes):
     return MulticlassSegmentationObjective(number_of_segmentation_classes)
 
 
-def run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler=None):
+def run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler=None, gradient_clipping_max_norm=None):
     model.train()
     accumulated_loss = 0.0
 
@@ -99,6 +99,8 @@ def run_single_training_epoch(model, training_dataloader, optimizer, device, seg
         predicted_logits = model(images)
         training_loss    = segmentation_objective.compute_training_loss(predicted_logits, masks)
         training_loss.backward()
+        if gradient_clipping_max_norm is not None:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=gradient_clipping_max_norm)
         optimizer.step()
 
         if cyclic_learning_rate_scheduler is not None:
@@ -175,7 +177,7 @@ def train_model(model, training_dataloader, validation_dataloader, training_conf
     best_model_weights          = copy.deepcopy(model.state_dict())
 
     for epoch in tqdm(range(1, training_config["epochs"] + 1), desc="Epochs"):
-        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler)
+        training_loss                          = run_single_training_epoch(model, training_dataloader, optimizer, device, segmentation_objective, cyclic_learning_rate_scheduler, training_config.get("gradient_clipping_max_norm", None))
         validation_loss, validation_dice_score = run_single_validation_epoch(model, validation_dataloader, device, segmentation_objective)
 
         epoch_message = f"Epoch {epoch:03d}/{training_config['epochs']} | Train Loss: {training_loss:.4f} | Val Loss: {validation_loss:.4f} | Val Dice: {validation_dice_score:.4f}"
