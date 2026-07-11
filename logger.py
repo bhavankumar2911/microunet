@@ -1,4 +1,5 @@
 import csv
+import os
 import statistics
 from datetime import datetime, date
 from pathlib import Path
@@ -159,7 +160,11 @@ class ExperimentLogger:
 
 
 def generate_next_run_id():
-    return datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    timestamp       = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    slurm_job_id    = os.environ.get("SLURM_JOB_ID")
+    if slurm_job_id:
+        return f"{timestamp}_{slurm_job_id}"
+    return timestamp
 
 
 def flatten_nested_configuration_into_single_level_dictionary(nested_configuration_dictionary):

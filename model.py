@@ -204,6 +204,27 @@ class MicroUNet(nn.Module):
 
         self.final_one_by_one_segmentation_head = nn.Conv2d(decoder_input_channel_count, output_channels, kernel_size=1)
 
+        self._initialize_all_convolution_weights(architecture_config.get("weight_initialization", "default"))
+
+    def _initialize_all_convolution_weights(self, weight_initialization_strategy):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                if weight_initialization_strategy == "kaiming_normal":
+                    nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
+                elif weight_initialization_strategy == "kaiming_uniform":
+                    nn.init.kaiming_uniform_(module.weight, mode="fan_out", nonlinearity="relu")
+                elif weight_initialization_strategy == "xavier_normal":
+                    nn.init.xavier_normal_(module.weight)
+                elif weight_initialization_strategy == "xavier_uniform":
+                    nn.init.xavier_uniform_(module.weight)
+                elif weight_initialization_strategy == "default":
+                    pass
+            elif isinstance(module, (nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d)):
+                if module.weight is not None:
+                    nn.init.ones_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
     def forward(self, input_tensor):
         input_spatial_size   = input_tensor.shape[2:]
         all_skip_connections = []

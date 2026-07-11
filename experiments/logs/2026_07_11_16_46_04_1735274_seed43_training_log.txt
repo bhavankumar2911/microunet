@@ -1,0 +1,27 @@
+Epoch 001/100 | Train Loss: 1.2971 | Val Loss: 1.2214 | Val Dice: 0.4673
+Epoch 002/100 | Train Loss: 1.1362 | Val Loss: 1.0622 | Val Dice: 0.7670
+Epoch 003/100 | Train Loss: 0.9941 | Val Loss: 0.9474 | Val Dice: 0.8361
+Epoch 004/100 | Train Loss: 0.9000 | Val Loss: 0.8983 | Val Dice: 0.8633
+Epoch 005/100 | Train Loss: 0.8611 | Val Loss: 0.8649 | Val Dice: 0.8702
+Epoch 006/100 | Train Loss: 0.8332 | Val Loss: 0.8487 | Val Dice: 0.8823
+Epoch 007/100 | Train Loss: 0.8153 | Val Loss: 0.8296 | Val Dice: 0.8890
+Epoch 008/100 | Train Loss: 0.8024 | Val Loss: 0.8152 | Val Dice: 0.9007
+Epoch 009/100 | Train Loss: 0.7893 | Val Loss: 0.8041 | Val Dice: 0.8988
+Epoch 010/100 | Train Loss: 0.7752 | Val Loss: 0.7927 | Val Dice: 0.9031
+Epoch 011/100 | Train Loss: 0.7657 | Val Loss: 0.7811 | Val Dice: 0.9019
+Epoch 012/100 | Train Loss: 0.7541 | Val Loss: 0.7694 | Val Dice: 0.9010
+Epoch 013/100 | Train Loss: 0.7430 | Val Loss: 0.7581 | Val Dice: 0.9019
+Epoch 014/100 | Train Loss: 0.7318 | Val Loss: 0.7493 | Val Dice: 0.8996
+Epoch 015/100 | Train Loss: 0.7245 | Val Loss: 0.7396 | Val Dice: 0.8997
+Epoch 016/100 | Train Loss: 0.7116 | Val Loss: 0.7302 | Val Dice: 0.9081
+Epoch 017/100 | Train Loss: 0.7032 | Val Loss: 0.7234 | Val Dice: 0.8906
+Epoch 018/100 | Train Loss: 0.6947 | Val Loss: 0.7124 | Val Dice: 0.8986
+Epoch 019/100 | Train Loss: 0.6822 | Val Loss: 0.7048 | Val Dice: 0.8994
+Epoch 020/100 | Train Loss: 0.6781 | Val Loss: 0.6973 | Val Dice: 0.8993
+Epoch 021/100 | Train Loss: 0.6671 | Val Loss: 0.6869 | Val Dice: 0.8971
+Epoch 022/100 | Train Loss: 0.6588 | Val Loss: 0.6790 | Val Dice: 0.8994
+Epoch 023/100 | Train Loss: 0.6522 | Val Loss: 0.6760 | Val Dice: 0.8884
+Epoch 024/100 | Train Loss: 0.6449 | Val Loss: 0.6677 | Val Dice: 0.8928
+Epoch 025/100 | Train Loss: 0.6350 | Val Loss: 0.6525 | Val Dice: 0.9041
+Epoch 026/100 | Train Loss: 0.6287 | Val Loss: 0.6466 | Val Dice: 0.9068
+Early stopping at epoch 26: validation Dice has not improved beyond 0.9081 by more than 0.0010 for 10 consecutive epochs.

@@ -1,5 +1,6 @@
 import ast
 import os
+import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from PIL import Image
 from scipy import sparse
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 from torchvision import transforms
+from torchvision.transforms import functional as transforms_functional
+from torchvision.transforms import InterpolationMode
 
 
 class PadShorterSideWithZerosToMakeSquare:
@@ -43,6 +46,58 @@ def convert_to_pil_image_if_needed(possible_array_or_image):
     if isinstance(possible_array_or_image, Image.Image):
         return possible_array_or_image
     return Image.fromarray(np.array(possible_array_or_image))
+
+
+def apply_synchronized_augmentation_to_image_and_mask(image_tensor, mask_tensor, apply_horizontal_flip, apply_vertical_flip, rotation_max_angle_degrees):
+    if apply_horizontal_flip and random.random() > 0.5:
+        image_tensor = transforms_functional.hflip(image_tensor)
+        mask_tensor  = transforms_functional.hflip(mask_tensor)
+
+    if apply_vertical_flip and random.random() > 0.5:
+        image_tensor = transforms_functional.vflip(image_tensor)
+        mask_tensor  = transforms_functional.vflip(mask_tensor)
+
+    if rotation_max_angle_degrees > 0:
+        rotation_angle       = random.uniform(-rotation_max_angle_degrees, rotation_max_angle_degrees)
+        image_tensor         = transforms_functional.rotate(image_tensor, rotation_angle, interpolation=InterpolationMode.BILINEAR)
+        mask_is_integer_type = mask_tensor.dtype in (torch.long, torch.int32, torch.int16, torch.int8)
+        float_mask_tensor    = mask_tensor.float() if mask_is_integer_type else mask_tensor
+        needs_channel_dim    = float_mask_tensor.ndim == 2
+        if needs_channel_dim:
+            float_mask_tensor = float_mask_tensor.unsqueeze(0)
+        rotated_float_mask   = transforms_functional.rotate(float_mask_tensor, rotation_angle, interpolation=InterpolationMode.NEAREST)
+        if needs_channel_dim:
+            rotated_float_mask = rotated_float_mask.squeeze(0)
+        mask_tensor          = rotated_float_mask.long() if mask_is_integer_type else rotated_float_mask
+
+    return image_tensor, mask_tensor
+
+
+class AugmentedTrainingDatasetWrapper(Dataset):
+    def __init__(self, base_dataset, training_config):
+        self.base_dataset               = base_dataset
+        self.apply_horizontal_flip      = training_config.get("augmentation_apply_horizontal_flip", True)
+        self.apply_vertical_flip        = training_config.get("augmentation_apply_vertical_flip", True)
+        self.rotation_max_angle_degrees = training_config.get("augmentation_rotation_max_angle_degrees", 15)
+
+    def __len__(self):
+        return len(self.base_dataset)
+
+    def __getitem__(self, index):
+        image_tensor, mask_tensor = self.base_dataset[index]
+        return apply_synchronized_augmentation_to_image_and_mask(
+            image_tensor,
+            mask_tensor,
+            self.apply_horizontal_flip,
+            self.apply_vertical_flip,
+            self.rotation_max_angle_degrees,
+        )
+
+
+def wrap_with_augmentation_if_enabled(dataset_or_subset, training_config):
+    if training_config.get("use_augmentation", False):
+        return AugmentedTrainingDatasetWrapper(dataset_or_subset, training_config)
+    return dataset_or_subset
 
 
 class SegmentationDataset(Dataset, ABC):
@@ -467,8 +522,9 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_dataset)
         validation_sample_count = len(validation_dataset)
 
-        training_dataloader   = DataLoader(training_dataset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_dataset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_dataset, training_config)
+        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_dataset,             batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     elif getattr(dataset_class, "requires_patient_grouped_validation_split", False):
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -486,8 +542,9 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_subset)
         validation_sample_count = len(validation_subset)
 
-        training_dataloader   = DataLoader(training_subset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_subset, training_config)
+        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,              batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     else:
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -508,8 +565,9 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
             generator=reproducible_split_generator
         )
 
-        training_dataloader   = DataLoader(training_subset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_subset, training_config)
+        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,              batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     print(f"Dataset: {training_config['dataset']} | {training_sample_count} training | {validation_sample_count} validation samples")
     return training_dataloader, validation_dataloader
