@@ -22,3 +22,5 @@ polyp-analyze.py
 slrum-commands.txt
 *batch-job*
 mlruns
+hpc
+helper_scripts

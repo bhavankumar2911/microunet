@@ -13,6 +13,7 @@ architecture:
   use_depthwise_separable_convolutions: false
   use_single_convolution_per_block: false
   skip_connection_mode: concat
+  # weight_initialization: "kaiming_normal"
 
 training:
   use_cyclic_learning_rate: false

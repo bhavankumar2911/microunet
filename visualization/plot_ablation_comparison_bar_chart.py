@@ -223,13 +223,6 @@ def save_bar_chart_batch(
     full_dataset_summary_stats,
     output_file_path,
 ):
-    parameter_percentage_change_by_dataset = compute_parameter_percentage_change_by_dataset(
-        batch_dataset_names, baseline_experiment_by_dataset, comparison_experiment_by_dataset
-    )
-    dice_percentage_change_by_dataset = compute_dice_percentage_change_by_dataset(
-        batch_dataset_names, baseline_experiment_by_dataset, comparison_experiment_by_dataset
-    )
-
     baseline_mean_dice_values = [
         baseline_experiment_by_dataset[dataset_name]["mean_val_dice"] for dataset_name in batch_dataset_names
     ]
@@ -270,38 +263,38 @@ def save_bar_chart_batch(
         label=comparison_series_label,
     )
 
-    for position, mean_dice_value in zip(baseline_bar_positions, baseline_mean_dice_values):
-        axes.text(position, mean_dice_value + 0.02, f"{mean_dice_value:.4f}", ha="center", fontsize=8)
-    for position, mean_dice_value in zip(comparison_bar_positions, comparison_mean_dice_values):
-        axes.text(position, mean_dice_value + 0.02, f"{mean_dice_value:.4f}", ha="center", fontsize=8)
+    for position, mean_dice_value, std_dice_value in zip(baseline_bar_positions, baseline_mean_dice_values, baseline_std_dice_values):
+        axes.text(position, mean_dice_value + 0.02, f"±{std_dice_value:.4f}", ha="center", fontsize=8, color="#222222")
+    for position, mean_dice_value, std_dice_value in zip(comparison_bar_positions, comparison_mean_dice_values, comparison_std_dice_values):
+        axes.text(position, mean_dice_value + 0.02, f"±{std_dice_value:.4f}", ha="center", fontsize=8, color="#222222")
 
-    for dataset_position, dataset_name in zip(bar_positions, batch_dataset_names):
-        parameter_percentage_change = parameter_percentage_change_by_dataset[dataset_name]
-        dice_percentage_change = dice_percentage_change_by_dataset[dataset_name]
-        tallest_bar_height_for_dataset = max(
-            baseline_experiment_by_dataset[dataset_name]["mean_val_dice"]
-            + baseline_experiment_by_dataset[dataset_name]["std_val_dice"],
-            comparison_experiment_by_dataset[dataset_name]["mean_val_dice"]
-            + comparison_experiment_by_dataset[dataset_name]["std_val_dice"],
-        )
-        axes.text(
-            dataset_position,
-            tallest_bar_height_for_dataset + 0.12,
-            f"{parameter_percentage_change:+.1f}% params",
-            ha="center",
-            fontsize=8,
-            color=choose_color_for_parameter_percentage_change(parameter_percentage_change),
-            style="italic",
-        )
-        axes.text(
-            dataset_position,
-            tallest_bar_height_for_dataset + 0.06,
-            f"{dice_percentage_change:+.1f}% dice",
-            ha="center",
-            fontsize=8,
-            color=choose_color_for_dice_percentage_change(dice_percentage_change),
-            style="italic",
-        )
+    stats = full_dataset_summary_stats
+    x_axis_start = -0.5
+    x_axis_end = len(batch_dataset_names) - 0.5
+
+    parameter_axes = axes.twinx()
+    parameter_axes.set_ylabel("Parameter Count")
+    parameter_axes.set_ylim(0, stats["rounded_average_baseline_parameters"] * 1.5)
+
+    parameter_axes.axhline(
+        y=stats["rounded_average_baseline_parameters"],
+        xmin=0,
+        xmax=1,
+        color="#4C72B0",
+        linewidth=1.5,
+        linestyle="-",
+        label=f"{stats['baseline_series_label']} params: {stats['rounded_average_baseline_parameters']:,}",
+    )
+    parameter_axes.axhline(
+        y=stats["rounded_average_comparison_parameters"],
+        xmin=0,
+        xmax=1,
+        color="#DD8452",
+        linewidth=1.5,
+        linestyle="-",
+        label=f"{stats['comparison_series_label']} params: {stats['rounded_average_comparison_parameters']:,}",
+    )
+    parameter_axes.legend(loc="upper right", fontsize=8)
 
     axes.set_xticks(list(bar_positions))
     axes.set_xticklabels(batch_dataset_names, rotation=30, ha="right")
@@ -333,20 +326,6 @@ def save_bar_chart_batch(
             f"{stats['comparison_series_label']}: {stats['rounded_average_comparison_parameters']:,}",
         ],
     ]
-    summary_table_cell_colors = [
-        [
-            choose_color_for_parameter_percentage_change(stats["average_all_parameter_change"]),
-            choose_color_for_parameter_percentage_change(stats["average_binary_parameter_change"]),
-            choose_color_for_parameter_percentage_change(stats["average_multiclass_parameter_change"]),
-            "#000000",
-        ],
-        [
-            choose_color_for_dice_percentage_change(stats["average_all_dice_change"]),
-            choose_color_for_dice_percentage_change(stats["average_binary_dice_change"]),
-            choose_color_for_dice_percentage_change(stats["average_multiclass_dice_change"]),
-            "#000000",
-        ],
-    ]
 
     summary_table = axes.table(
         cellText=summary_table_cell_text,
@@ -358,11 +337,6 @@ def save_bar_chart_batch(
     summary_table.auto_set_font_size(False)
     summary_table.set_fontsize(9)
 
-    for row_index in range(len(summary_table_cell_text)):
-        for column_index in range(len(summary_table_column_headers)):
-            summary_table[row_index + 1, column_index].get_text().set_color(
-                summary_table_cell_colors[row_index][column_index]
-            )
     for column_index in range(len(summary_table_column_headers)):
         summary_table[0, column_index].set_text_props(weight="bold")
 
@@ -474,7 +448,7 @@ def parse_command_line_arguments():
     argument_parser.add_argument(
         "--experiments-csv",
         default="../experiments/experiments_large.csv",
-        help="Path to experiments.csv (default: experiments/experiments.csv)",
+        help="Path to experiments_large.csv (default: ../experiments/experiments_large.csv)",
     )
     return argument_parser.parse_args()
 
