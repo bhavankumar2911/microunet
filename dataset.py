@@ -931,6 +931,52 @@ def split_indices_by_patient_group_three_way(patient_grouping_keys, validation_f
     return training_indices, validation_indices, test_indices
 
 
+class AugmentedTrainingDatasetWrapper(Dataset):
+    def __init__(self, underlying_dataset, apply_horizontal_flip, apply_vertical_flip, rotation_max_angle_degrees):
+        self.underlying_dataset         = underlying_dataset
+        self.apply_horizontal_flip      = apply_horizontal_flip
+        self.apply_vertical_flip        = apply_vertical_flip
+        self.rotation_max_angle_degrees = rotation_max_angle_degrees
+
+    def __len__(self):
+        return len(self.underlying_dataset)
+
+    def __getitem__(self, index):
+        image_tensor, mask_tensor = self.underlying_dataset[index]
+
+        if self.apply_horizontal_flip and torch.rand(1).item() > 0.5:
+            image_tensor = transforms.functional.hflip(image_tensor)
+            mask_tensor  = transforms.functional.hflip(mask_tensor)
+
+        if self.apply_vertical_flip and torch.rand(1).item() > 0.5:
+            image_tensor = transforms.functional.vflip(image_tensor)
+            mask_tensor  = transforms.functional.vflip(mask_tensor)
+
+        if self.rotation_max_angle_degrees > 0 and torch.rand(1).item() > 0.5:
+            rotation_angle = (torch.rand(1).item() * 2 - 1) * self.rotation_max_angle_degrees
+            image_tensor   = transforms.functional.rotate(image_tensor, rotation_angle)
+
+            is_multiclass_integer_mask = mask_tensor.dtype == torch.int64
+            if is_multiclass_integer_mask:
+                mask_tensor = transforms.functional.rotate(mask_tensor.unsqueeze(0), rotation_angle).squeeze(0)
+            else:
+                mask_tensor = transforms.functional.rotate(mask_tensor, rotation_angle)
+
+        return image_tensor, mask_tensor
+
+
+def build_augmented_training_dataset_if_enabled(training_subset, training_config):
+    if not training_config.get("use_augmentation", False):
+        return training_subset
+
+    return AugmentedTrainingDatasetWrapper(
+        underlying_dataset          = training_subset,
+        apply_horizontal_flip       = training_config.get("augmentation_apply_horizontal_flip", False),
+        apply_vertical_flip         = training_config.get("augmentation_apply_vertical_flip", False),
+        rotation_max_angle_degrees  = training_config.get("augmentation_rotation_max_angle_degrees", 0),
+    )
+
+
 def create_train_val_dataloaders(root_directory, training_config, validation_fraction=0.2, test_fraction=0.0):
     dataset_class   = resolve_dataset_class_from_registry(training_config["dataset"])
     use_color       = training_config.get("use_color_input", False)
@@ -943,8 +989,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_dataset)
         validation_sample_count = len(validation_dataset)
 
-        training_dataloader   = DataLoader(training_dataset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_dataset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_dataset = build_augmented_training_dataset_if_enabled(training_dataset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_dataset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_dataset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     elif getattr(dataset_class, "requires_patient_grouped_validation_split", False):
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -962,8 +1010,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_subset)
         validation_sample_count = len(validation_subset)
 
-        training_dataloader   = DataLoader(training_subset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_subset = build_augmented_training_dataset_if_enabled(training_subset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_subset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     else:
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -984,8 +1034,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
             generator=reproducible_split_generator
         )
 
-        training_dataloader   = DataLoader(training_subset,   batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_subset = build_augmented_training_dataset_if_enabled(training_subset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_subset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     print(f"Dataset: {training_config['dataset']} | {training_sample_count} training | {validation_sample_count} validation samples")
     return training_dataloader, validation_dataloader
