@@ -13,6 +13,7 @@ architecture:
   use_depthwise_separable_convolutions: false
   use_single_convolution_per_block: false
   skip_connection_mode: concat
+  # weight_initialization: "kaiming_normal"
 
 training:
   use_cyclic_learning_rate: false
@@ -30,5 +31,9 @@ training:
   use_color_input: true
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
+  # use_augmentation: true
+  # augmentation_apply_horizontal_flip: true
+  # augmentation_apply_vertical_flip: true
+  # augmentation_rotation_max_angle_degrees: 15
   hypothesis: "No hypothesis - instance normalization."
   notes: "Trying instance normalization for validation curve smoothing."

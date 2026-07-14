@@ -1,18 +1,23 @@
 import ast
 import os
-import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 import numpy as np
 import torch
-from medsegbench import CellnucleiMSBench, FHPsAOPMSBench, Isic2016MSBench, NusetMSBench, USforKidneyMSBench, WbcMSBench, YeazMSBench
+from medsegbench import (
+    AbdomenUSMSBench, Bbbc010MSBench, BkaiIghMSBench, BriFiSegMSBench, BusiMSBench,
+    CellnucleiMSBench, ChaseDB1MSBench, ChuacMSBench, Covid19RadioMSBench, CovidQUExMSBench,
+    CystoFluidMSBench, Dca1MSBench, DeepbacsMSBench, DriveMSBench, DynamicNuclearMSBench,
+    FHPsAOPMSBench, IdribMSBench, Isic2016MSBench, Isic2018MSBench, KvasirMSBench,
+    M2caiSegMSBench, MonusacMSBench, MosMedPlusMSBench, NucleiMSBench, NusetMSBench,
+    PandentalMSBench, PolypGenMSBench, Promise12MSBench, RoboToolMSBench, TnbcnucleiMSBench,
+    UltrasoundNerveMSBench, USforKidneyMSBench, UWSkinCancerMSBench, WbcMSBench, YeazMSBench,
+)
 from PIL import Image
 from scipy import sparse
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 from torchvision import transforms
-from torchvision.transforms import functional as transforms_functional
-from torchvision.transforms import InterpolationMode
 
 
 class PadShorterSideWithZerosToMakeSquare:
@@ -46,58 +51,6 @@ def convert_to_pil_image_if_needed(possible_array_or_image):
     if isinstance(possible_array_or_image, Image.Image):
         return possible_array_or_image
     return Image.fromarray(np.array(possible_array_or_image))
-
-
-def apply_synchronized_augmentation_to_image_and_mask(image_tensor, mask_tensor, apply_horizontal_flip, apply_vertical_flip, rotation_max_angle_degrees):
-    if apply_horizontal_flip and random.random() > 0.5:
-        image_tensor = transforms_functional.hflip(image_tensor)
-        mask_tensor  = transforms_functional.hflip(mask_tensor)
-
-    if apply_vertical_flip and random.random() > 0.5:
-        image_tensor = transforms_functional.vflip(image_tensor)
-        mask_tensor  = transforms_functional.vflip(mask_tensor)
-
-    if rotation_max_angle_degrees > 0:
-        rotation_angle       = random.uniform(-rotation_max_angle_degrees, rotation_max_angle_degrees)
-        image_tensor         = transforms_functional.rotate(image_tensor, rotation_angle, interpolation=InterpolationMode.BILINEAR)
-        mask_is_integer_type = mask_tensor.dtype in (torch.long, torch.int32, torch.int16, torch.int8)
-        float_mask_tensor    = mask_tensor.float() if mask_is_integer_type else mask_tensor
-        needs_channel_dim    = float_mask_tensor.ndim == 2
-        if needs_channel_dim:
-            float_mask_tensor = float_mask_tensor.unsqueeze(0)
-        rotated_float_mask   = transforms_functional.rotate(float_mask_tensor, rotation_angle, interpolation=InterpolationMode.NEAREST)
-        if needs_channel_dim:
-            rotated_float_mask = rotated_float_mask.squeeze(0)
-        mask_tensor          = rotated_float_mask.long() if mask_is_integer_type else rotated_float_mask
-
-    return image_tensor, mask_tensor
-
-
-class AugmentedTrainingDatasetWrapper(Dataset):
-    def __init__(self, base_dataset, training_config):
-        self.base_dataset               = base_dataset
-        self.apply_horizontal_flip      = training_config.get("augmentation_apply_horizontal_flip", True)
-        self.apply_vertical_flip        = training_config.get("augmentation_apply_vertical_flip", True)
-        self.rotation_max_angle_degrees = training_config.get("augmentation_rotation_max_angle_degrees", 15)
-
-    def __len__(self):
-        return len(self.base_dataset)
-
-    def __getitem__(self, index):
-        image_tensor, mask_tensor = self.base_dataset[index]
-        return apply_synchronized_augmentation_to_image_and_mask(
-            image_tensor,
-            mask_tensor,
-            self.apply_horizontal_flip,
-            self.apply_vertical_flip,
-            self.rotation_max_angle_degrees,
-        )
-
-
-def wrap_with_augmentation_if_enabled(dataset_or_subset, training_config):
-    if training_config.get("use_augmentation", False):
-        return AugmentedTrainingDatasetWrapper(dataset_or_subset, training_config)
-    return dataset_or_subset
 
 
 class SegmentationDataset(Dataset, ABC):
@@ -368,6 +321,442 @@ class YeastCellSegmentationDataset(MedSegBenchBinarySegmentationDataset):
         return self.underlying_medsegbench_dataset[index]
 
 
+
+class Bbbc010SegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = Bbbc010MSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class BriFiSegSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = BriFiSegMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class BusiSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = BusiMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class ChaseDB1SegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = ChaseDB1MSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class ChuacSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = ChuacMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class Covid19RadioSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = Covid19RadioMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class CovidQUExSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = CovidQUExMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class CystoFluidSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = CystoFluidMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class Dca1SegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = Dca1MSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class DeepbacsSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = DeepbacsMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class DriveSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = DriveMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class DynamicNuclearSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = DynamicNuclearMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class IdribSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    fixed_category = "C4"
+
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = IdribMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory),
+            category=self.fixed_category
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class Isic2018SegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = Isic2018MSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class KvasirSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = KvasirMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class MosMedPlusSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = MosMedPlusMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class NucleiSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = NucleiMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class PandentalSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = PandentalMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class PolypGenSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = PolypGenMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class Promise12SegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = Promise12MSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class RoboToolSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = RoboToolMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class TnbcNucleiSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = TnbcnucleiMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class UltrasoundNerveSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = UltrasoundNerveMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class UwSkinCancerSegmentationDataset(MedSegBenchBinarySegmentationDataset):
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = UWSkinCancerMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_binary_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class AbdomenUSSegmentationDataset(MultiClassSegmentationDataset):
+    has_predefined_validation_split = True
+    number_of_segmentation_classes  = 9
+
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = AbdomenUSMSBench(
+            split=split, size=image_size, download=False,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_class_index_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class BkaiIghSegmentationDataset(MultiClassSegmentationDataset):
+    has_predefined_validation_split = True
+    number_of_segmentation_classes  = 3
+
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = BkaiIghMSBench(
+            split=split, size=image_size, download=False,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_class_index_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class M2caiSegSegmentationDataset(MultiClassSegmentationDataset):
+    has_predefined_validation_split = True
+    number_of_segmentation_classes  = 19
+
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = M2caiSegMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_class_index_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
+class MonusacSegmentationDataset(MultiClassSegmentationDataset):
+    has_predefined_validation_split = True
+    number_of_segmentation_classes  = 6
+
+    def __init__(self, root_directory, image_size, split="train", use_color_input=False):
+        self.underlying_medsegbench_dataset = MonusacMSBench(
+            split=split, size=image_size, download=True,
+            root=ensure_medsegbench_root_directory_exists(root_directory)
+        )
+        super().__init__(image_size, use_color_input)
+
+    def __len__(self):
+        return len(self.underlying_medsegbench_dataset)
+
+    def fetch_raw_image_and_class_index_mask(self, index):
+        return self.underlying_medsegbench_dataset[index]
+
+
 def parse_one_hot_shape_from_label_filename(label_filepath):
     shape_string = label_filepath.name.split(".")[-2]
     return ast.literal_eval(shape_string)
@@ -466,20 +855,52 @@ class BeyondCranialVaultOrganSegmentationDataset(IMed361MSegmentationDataset):
 
 
 DATASET_REGISTRY = {
-    "BAGLS":          BAGLSSegmentationDataset,
-    "EMSegmentation": EMSegmentationDataset,
-    "Polyp":          PolypSegmentationDataset,
-    "FHPsAOP":        FetalHeadPubicSymphysisSegmentationDataset,
-    "Wbc":            WhiteBloodCellSegmentationDataset,
-    "CellNuclei":     CellNucleiSegmentationDataset,
-    "Nuset":          CrowdedNucleiSegmentationDataset,
-    "USforKidney":    KidneyUltrasoundSegmentationDataset,
-    "Isic2016":       SkinLesionSegmentationDataset,
-    "Yeaz":           YeastCellSegmentationDataset,
-    "Chaos":          ChaosAbdominalOrganSegmentationDataset,
-    "Acdc":           AutomatedCardiacDiagnosisSegmentationDataset,
-    "MmWhsMr":        MultiModalityWholeHeartSegmentationDataset,
-    "Btcv":           BeyondCranialVaultOrganSegmentationDataset,
+    # File-based datasets (your own folders)
+    "BAGLS":            BAGLSSegmentationDataset,
+    "EMSegmentation":   EMSegmentationDataset,
+    "Polyp":            PolypSegmentationDataset,
+    # MedSegBench — multi-class
+    "FHPsAOP":          FetalHeadPubicSymphysisSegmentationDataset,
+    "Wbc":              WhiteBloodCellSegmentationDataset,
+    "AbdomenUS":        AbdomenUSSegmentationDataset,
+    "BkaiIgh":          BkaiIghSegmentationDataset,
+    "M2caiSeg":         M2caiSegSegmentationDataset,
+    "Monusac":          MonusacSegmentationDataset,
+    # MedSegBench — binary
+    "Bbbc010":          Bbbc010SegmentationDataset,
+    "BriFiSeg":         BriFiSegSegmentationDataset,
+    "Busi":             BusiSegmentationDataset,
+    "CellNuclei":       CellNucleiSegmentationDataset,
+    "ChaseDB1":         ChaseDB1SegmentationDataset,
+    "Chuac":            ChuacSegmentationDataset,
+    "Covid19Radio":     Covid19RadioSegmentationDataset,
+    "CovidQUEx":        CovidQUExSegmentationDataset,
+    "CystoFluid":       CystoFluidSegmentationDataset,
+    "Dca1":             Dca1SegmentationDataset,
+    "Deepbacs":         DeepbacsSegmentationDataset,
+    "Drive":            DriveSegmentationDataset,
+    "DynamicNuclear":   DynamicNuclearSegmentationDataset,
+    "Idrib":            IdribSegmentationDataset,
+    "Isic2016":         SkinLesionSegmentationDataset,
+    "Isic2018":         Isic2018SegmentationDataset,
+    "Kvasir":           KvasirSegmentationDataset,
+    "MosMedPlus":       MosMedPlusSegmentationDataset,
+    "Nuclei":           NucleiSegmentationDataset,
+    "Nuset":            CrowdedNucleiSegmentationDataset,
+    "Pandental":        PandentalSegmentationDataset,
+    "PolypGen":         PolypGenSegmentationDataset,
+    "Promise12":        Promise12SegmentationDataset,
+    "RoboTool":         RoboToolSegmentationDataset,
+    "TnbcNuclei":       TnbcNucleiSegmentationDataset,
+    "UltrasoundNerve":  UltrasoundNerveSegmentationDataset,
+    "USforKidney":      KidneyUltrasoundSegmentationDataset,
+    "UwSkinCancer":     UwSkinCancerSegmentationDataset,
+    "Yeaz":             YeastCellSegmentationDataset,
+    # IMed-361M datasets
+    "Chaos":            ChaosAbdominalOrganSegmentationDataset,
+    "Acdc":             AutomatedCardiacDiagnosisSegmentationDataset,
+    "MmWhsMr":          MultiModalityWholeHeartSegmentationDataset,
+    "Btcv":             BeyondCranialVaultOrganSegmentationDataset,
 }
 
 
@@ -510,6 +931,52 @@ def split_indices_by_patient_group_three_way(patient_grouping_keys, validation_f
     return training_indices, validation_indices, test_indices
 
 
+class AugmentedTrainingDatasetWrapper(Dataset):
+    def __init__(self, underlying_dataset, apply_horizontal_flip, apply_vertical_flip, rotation_max_angle_degrees):
+        self.underlying_dataset         = underlying_dataset
+        self.apply_horizontal_flip      = apply_horizontal_flip
+        self.apply_vertical_flip        = apply_vertical_flip
+        self.rotation_max_angle_degrees = rotation_max_angle_degrees
+
+    def __len__(self):
+        return len(self.underlying_dataset)
+
+    def __getitem__(self, index):
+        image_tensor, mask_tensor = self.underlying_dataset[index]
+
+        if self.apply_horizontal_flip and torch.rand(1).item() > 0.5:
+            image_tensor = transforms.functional.hflip(image_tensor)
+            mask_tensor  = transforms.functional.hflip(mask_tensor)
+
+        if self.apply_vertical_flip and torch.rand(1).item() > 0.5:
+            image_tensor = transforms.functional.vflip(image_tensor)
+            mask_tensor  = transforms.functional.vflip(mask_tensor)
+
+        if self.rotation_max_angle_degrees > 0 and torch.rand(1).item() > 0.5:
+            rotation_angle = (torch.rand(1).item() * 2 - 1) * self.rotation_max_angle_degrees
+            image_tensor   = transforms.functional.rotate(image_tensor, rotation_angle)
+
+            is_multiclass_integer_mask = mask_tensor.dtype == torch.int64
+            if is_multiclass_integer_mask:
+                mask_tensor = transforms.functional.rotate(mask_tensor.unsqueeze(0), rotation_angle).squeeze(0)
+            else:
+                mask_tensor = transforms.functional.rotate(mask_tensor, rotation_angle)
+
+        return image_tensor, mask_tensor
+
+
+def build_augmented_training_dataset_if_enabled(training_subset, training_config):
+    if not training_config.get("use_augmentation", False):
+        return training_subset
+
+    return AugmentedTrainingDatasetWrapper(
+        underlying_dataset          = training_subset,
+        apply_horizontal_flip       = training_config.get("augmentation_apply_horizontal_flip", False),
+        apply_vertical_flip         = training_config.get("augmentation_apply_vertical_flip", False),
+        rotation_max_angle_degrees  = training_config.get("augmentation_rotation_max_angle_degrees", 0),
+    )
+
+
 def create_train_val_dataloaders(root_directory, training_config, validation_fraction=0.2, test_fraction=0.0):
     dataset_class   = resolve_dataset_class_from_registry(training_config["dataset"])
     use_color       = training_config.get("use_color_input", False)
@@ -522,9 +989,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_dataset)
         validation_sample_count = len(validation_dataset)
 
-        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_dataset, training_config)
-        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_dataset,             batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_dataset = build_augmented_training_dataset_if_enabled(training_dataset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_dataset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_dataset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     elif getattr(dataset_class, "requires_patient_grouped_validation_split", False):
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -542,9 +1010,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
         training_sample_count   = len(training_subset)
         validation_sample_count = len(validation_subset)
 
-        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_subset, training_config)
-        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset,              batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_subset = build_augmented_training_dataset_if_enabled(training_subset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_subset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     else:
         full_training_dataset = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
@@ -565,9 +1034,10 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
             generator=reproducible_split_generator
         )
 
-        augmented_training_data_source = wrap_with_augmentation_if_enabled(training_subset, training_config)
-        training_dataloader   = DataLoader(augmented_training_data_source, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
-        validation_dataloader = DataLoader(validation_subset,              batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        augmented_training_subset = build_augmented_training_dataset_if_enabled(training_subset, training_config)
+
+        training_dataloader   = DataLoader(augmented_training_subset, batch_size=training_config["batch_size"], shuffle=True,  num_workers=2)
+        validation_dataloader = DataLoader(validation_subset,         batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
 
     print(f"Dataset: {training_config['dataset']} | {training_sample_count} training | {validation_sample_count} validation samples")
     return training_dataloader, validation_dataloader
