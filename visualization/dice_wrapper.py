@@ -18,6 +18,7 @@ ABLATIONS_TO_PLOT = [
         "baseline_label": "Naive Baseline",
         "comparison_hypothesis": HYPOTHESIS_INSTANCE_NORM,
         "comparison_label": "Instance Norm",
+        "hide_parameter_lines": True,
         "output_file": OUTPUT_BASE_FOLDER / "batch_norm_baseline_vs_instance_norm.png",
     },
     {
@@ -25,6 +26,7 @@ ABLATIONS_TO_PLOT = [
         "baseline_label": "Instance Norm",
         "comparison_hypothesis": HYPOTHESIS_DATA_AUGMENTATION_AND_INSTANCE_NORM,
         "comparison_label": "Data Augmentation + Instance Norm",
+        "hide_parameter_lines": True,
         "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "instance_norm_vs_data_augmentation.png",
     },
     {
@@ -32,6 +34,7 @@ ABLATIONS_TO_PLOT = [
         "baseline_label": "Data Augmentation + Instance Norm",
         "comparison_hypothesis": HYPOTHESIS_DATA_AUGMENTATION_AND_INSTANCE_NORM_AND_KAIMING_NORMAL,
         "comparison_label": "Data Augmentation + Instance Norm + Kaiming Normal",
+        "hide_parameter_lines": True,
         "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "data_augmentation" / "data_augmentation_vs_kaiming_normal.png",
     },
     {
@@ -39,6 +42,7 @@ ABLATIONS_TO_PLOT = [
         "baseline_label": "Data Augmentation + Instance Norm + Kaiming Normal",
         "comparison_hypothesis": HYPOTHESIS_ATTENTION_GATE,
         "comparison_label": "Attention Gate",
+        "hide_parameter_lines": False,
         "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "data_augmentation" / "kaiming_normal" / "attention_gate_vs_kaiming_normal.png",
     },
 ]
@@ -92,7 +96,7 @@ def run_all_ablation_delta_dot_plots():
             comparison_label=ablation["comparison_label"],
             output_file=ablation["output_file"],
             chart_title=ablation.get("chart_title"),
-            hide_parameter_lines=ablation.get("hide_parameter_lines", False),
+            hide_parameter_lines=ablation.get("hide_parameter_lines", True),
         )
 
     print(f"\n{'=' * 70}")
