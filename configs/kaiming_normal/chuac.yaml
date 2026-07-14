@@ -35,5 +35,5 @@ training:
   augmentation_apply_horizontal_flip: true
   augmentation_apply_vertical_flip: true
   augmentation_rotation_max_angle_degrees: 15
-  hypothesis: "No hypothesis -  kaiming normal initialization."
-  notes: "kaiming normal initialization."
+  hypothesis: "No hypothesis -  data augmentation + instance norm + kaiming normal."
+  notes: "data augmentation + instance norm + kaiming normal - rerun after data aug fix."
