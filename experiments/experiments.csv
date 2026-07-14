@@ -537,3 +537,4 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_07_14_01_08_19_1744692,2026-07-14,Btcv,98502,0.6096,0.0681,Using attention gates help in improving the dice.,data augmentation + instance norm + kaiming normal + attention gates.,
 2026_07_14_01_20_48_1744703,2026-07-14,Covid19Radio,98385,0.9767,0.0017,Using attention gates help in improving the dice.,data augmentation + instance norm + kaiming normal + attention gates.,
 2026_07_14_10_44_10_1745004,2026-07-14,Dca1,95841,0.7057,0.0118,No hypothesis -  data augmentation + instance norm + kaiming normal.,data augmentation + instance norm + kaiming normal - rerun after data aug fix.,
+2026_07_14_10_44_10_1745003,2026-07-14,Btcv,95958,0.6915,0.0236,No hypothesis -  data augmentation + instance norm + kaiming normal.,data augmentation + instance norm + kaiming normal - rerun after data aug fix.,
