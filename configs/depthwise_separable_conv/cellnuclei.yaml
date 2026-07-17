@@ -2,7 +2,7 @@ architecture:
   encoder_channels: [8, 16, 32]
   bottleneck_channels: 52
   kernel_size: 3
-  normalization: "batch_norm"
+  normalization: "instance_norm"
   group_norm_num_groups: 8
   activation: h_swish
   upsampling_mode: nearest_neighbor
@@ -13,22 +13,27 @@ architecture:
   use_depthwise_separable_convolutions: true
   use_single_convolution_per_block: false
   skip_connection_mode: concat
+  weight_initialization: "kaiming_normal"
 
 training:
   use_cyclic_learning_rate: false
-  cyclic_learning_rate_minimum: 1e-6
-  cyclic_learning_rate_maximum: 1e-3
+  cyclic_learning_rate_minimum: 1e-5
+  cyclic_learning_rate_maximum: 1e-4
   cyclic_learning_rate_half_cycle_epochs: 2
   data_root: data/CellNuclei
   learning_rate: 0.001
   weight_decay: 1e-4
   batch_size: 64
-  epochs: 100
+  epochs: 150
   dataset: CellNuclei
   image_size: 256
   # max_samples: 20000
   use_color_input: true
   early_stopping_patience: 10
   early_stopping_minimum_improvement_delta: 0.001
-  hypothesis: "Using depth-wise separable convolution reduces parameters without losing much in dice."
-  notes: "baseline vs depth-wise separable convolution"
+  use_augmentation: false
+  augmentation_apply_horizontal_flip: true
+  augmentation_apply_vertical_flip: true
+  augmentation_rotation_max_angle_degrees: 15
+  hypothesis: "Depth-wise separable layers does not lose much in Dice."
+  notes: "depth-wise separable convolution with with intance norm and kaiming normal as baseline."
