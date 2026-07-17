@@ -1139,3 +1139,6 @@ run_id,date,dataset,parameters,mean_val_dice,std_val_dice,hypothesis,notes,inter
 2026_07_17_05_24_48_1750355,2026-07-17,Covid19Radio,79901,0.9753,0.0003,Single convolution per block (10-20-40-80) cuts down parameters greatly without significant loss in Dice.,Single convolution per block (10-20-40-80),
 2026_07_17_04_56_45_1750304,2026-07-17,Btcv,47430,0.5787,0.0395,Single convolution per block (8-16-32-52) cuts down parameters greatly without significant loss in Dice.,Single convolution per block (8-16-32-52),
 2026_07_17_05_20_46_1750344,2026-07-17,Btcv,80044,0.6695,0.0293,Single convolution per block (10-20-40-80) cuts down parameters greatly without significant loss in Dice.,Single convolution per block (10-20-40-80),
+2026_07_17_12_58_14_1750946,2026-07-17,Bbbc010,79901,0.874,0.0365,Single convolution per block (10-20-40-80) cuts down parameters greatly without significant loss in Dice.,Single convolution per block (10-20-40-80),
+2026_07_17_12_58_13_1750944,2026-07-17,Deepbacs,95841,0.8047,0.0201,Stable Baseline (Instance norm + Kaiming normal),Stable Baseline (Instance norm + Kaiming normal),
+2026_07_17_12_58_14_1750945,2026-07-17,Isic2016,38389,0.9016,0.0034,Depth-wise separable layers (12-24-48-96) does not lose much in Dice.,Depth-wise separable layers (12-24-48-96),

@@ -35,5 +35,5 @@ training:
   augmentation_apply_horizontal_flip: true
   augmentation_apply_vertical_flip: true
   augmentation_rotation_max_angle_degrees: 15
-  hypothesis: "Single convolution per block (8-16-32-52) cuts down parameters greatly without significant loss in Dice."
-  notes: "Single convolution per block (8-16-32-52)"
+  hypothesis: "Depth-wise separable layers (8-16-32-52) does not lose much in Dice."
+  notes: "Depth-wise separable layers (8-16-32-52)"
