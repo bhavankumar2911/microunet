@@ -1,0 +1,42 @@
+architecture:
+  activation: h_swish
+  bottleneck_channels: 64
+  convolutions_per_block: 3
+  dropout_probability: 0.0
+  encoder_channels:
+  - 16
+  - 32
+  group_norm_num_groups: 8
+  input_channels: 1
+  kernel_size: 3
+  normalization: instance_norm
+  skip_connection_mode: concat
+  upsampling_mode: nearest_neighbor
+  use_attention_gates: false
+  use_depthwise_separable_convolutions: true
+  use_residual_connections: false
+  use_single_convolution_per_block: false
+  weight_initialization: kaiming_normal
+training:
+  augmentation_apply_horizontal_flip: true
+  augmentation_apply_vertical_flip: true
+  augmentation_rotation_max_angle_degrees: 15
+  batch_size: 32
+  cyclic_learning_rate_half_cycle_epochs: 2
+  cyclic_learning_rate_maximum: 0.0001
+  cyclic_learning_rate_minimum: 1.0e-05
+  data_root: data/Chaos
+  dataset: Chaos
+  early_stopping_minimum_improvement_delta: 0.001
+  early_stopping_patience: 10
+  epochs: 150
+  hypothesis: Depth-wise separable layers (16-32-64) with three convolutions per block
+    does not lose much in Dice.
+  image_size: 256
+  learning_rate: 0.001
+  notes: Depth-wise separable layers (16-32-64), convolutions_per_block=3
+  seed: 44
+  use_augmentation: false
+  use_color_input: false
+  use_cyclic_learning_rate: false
+  weight_decay: 0.0001

@@ -43,7 +43,8 @@ class ConvolutionBlock(nn.Module):
         kernel_size             = architecture_config["kernel_size"]
         same_size_padding       = kernel_size // 2
         use_depthwise_separable = architecture_config.get("use_depthwise_separable_convolutions", False)
-        use_single_convolution  = architecture_config.get("use_single_convolution_per_block", False)
+
+        number_of_convolutions_per_block = self.resolve_number_of_convolutions_per_block(architecture_config)
 
         self.apply_residual_connection = architecture_config["use_residual_connections"]
 
@@ -65,15 +66,38 @@ class ConvolutionBlock(nn.Module):
             build_activation_layer(activation_type),
         ]
 
-        if use_single_convolution:
-            self.convolution_with_norm_and_activation = nn.Sequential(*first_convolution_group)
+        third_convolution_group = [
+            build_standard_or_depthwise_separable_convolution_layer(
+                output_channels, output_channels, kernel_size, same_size_padding,
+                use_depthwise_separable
+            ),
+            build_normalization_layer(normalization_type, output_channels, group_norm_groups),
+            build_activation_layer(activation_type),
+        ]
+
+        if number_of_convolutions_per_block == 1:
+            all_convolution_layers = first_convolution_group
+        elif number_of_convolutions_per_block == 2:
+            all_convolution_layers = first_convolution_group + second_convolution_group
         else:
-            self.convolution_with_norm_and_activation = nn.Sequential(*first_convolution_group, *second_convolution_group)
+            all_convolution_layers = first_convolution_group + second_convolution_group + third_convolution_group
+
+        self.convolution_with_norm_and_activation = nn.Sequential(*all_convolution_layers)
 
         if self.apply_residual_connection and input_channels != output_channels:
             self.channel_matching_shortcut = nn.Conv2d(input_channels, output_channels, kernel_size=1, bias=False)
         else:
             self.channel_matching_shortcut = nn.Identity()
+
+    @staticmethod
+    def resolve_number_of_convolutions_per_block(architecture_config):
+        if "convolutions_per_block" in architecture_config:
+            requested_count = architecture_config["convolutions_per_block"]
+            assert requested_count in (1, 2, 3), f"convolutions_per_block must be 1, 2, or 3, got {requested_count}"
+            return requested_count
+        if architecture_config.get("use_single_convolution_per_block", False):
+            return 1
+        return 2
 
     def forward(self, input_tensor):
         convolution_output = self.convolution_with_norm_and_activation(input_tensor)

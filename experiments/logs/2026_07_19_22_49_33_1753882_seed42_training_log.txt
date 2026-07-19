@@ -1,0 +1,7 @@
+Epoch 001/100 | Train Loss: 0.3660 | Val Loss: 0.2160 | Val Dice: 0.9216
+Epoch 002/100 | Train Loss: 0.1799 | Val Loss: 0.1624 | Val Dice: 0.9396
+Epoch 003/100 | Train Loss: 0.1453 | Val Loss: 0.1444 | Val Dice: 0.9447
+Epoch 004/100 | Train Loss: 0.1283 | Val Loss: 0.1276 | Val Dice: 0.9517
+Epoch 005/100 | Train Loss: 0.1165 | Val Loss: 0.1184 | Val Dice: 0.9547
+Epoch 006/100 | Train Loss: 0.1095 | Val Loss: 0.1096 | Val Dice: 0.9578
+Epoch 007/100 | Train Loss: 0.1036 | Val Loss: 0.1087 | Val Dice: 0.9579
