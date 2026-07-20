@@ -58,6 +58,13 @@ COMPARISON_PAIRS = [
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48) + triple convolution per block + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48) + triple convolution per block + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (16-32-64) does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (16-32-64)",
         "skip_non_inferiority": False,
@@ -67,6 +74,13 @@ COMPARISON_PAIRS = [
         "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution per block does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + attention gate",
         "skip_non_inferiority": False,
     },
     {
@@ -95,6 +109,13 @@ COMPARISON_PAIRS = [
         "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (18-36-72) + triple convolution per block does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (18-36-72) + triple convolution",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (18-36-72) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (18-36-72) + attention gate",
         "skip_non_inferiority": False,
     },
     {
