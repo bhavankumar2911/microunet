@@ -1,0 +1,38 @@
+architecture:
+  encoder_channels: [12, 24, 48]
+  bottleneck_channels: 96
+  kernel_size: 3
+  normalization: "instance_norm"
+  group_norm_num_groups: 8
+  activation: h_swish
+  upsampling_mode: nearest_neighbor
+  use_residual_connections: false
+  use_attention_gates: true
+  dropout_probability: 0.0
+  input_channels: 3
+  use_depthwise_separable_convolutions: true
+  use_single_convolution_per_block: false
+  skip_connection_mode: concat
+  weight_initialization: "kaiming_normal"
+
+training:
+  use_cyclic_learning_rate: false
+  cyclic_learning_rate_minimum: 1e-5
+  cyclic_learning_rate_maximum: 1e-4
+  cyclic_learning_rate_half_cycle_epochs: 2
+  data_root: data/Idrib
+  learning_rate: 0.001
+  weight_decay: 1e-4
+  batch_size: 32
+  epochs: 100
+  dataset: Idrib
+  image_size: 256
+  use_color_input: true
+  early_stopping_patience: 10
+  early_stopping_minimum_improvement_delta: 0.001
+  use_augmentation: false
+  augmentation_apply_horizontal_flip: true
+  augmentation_apply_vertical_flip: true
+  augmentation_rotation_max_angle_degrees: 15
+  hypothesis: "Depth-wise separable layers (12-24-48-96) + attention gate does not lose much in Dice."
+  notes: "Depth-wise separable layers (12-24-48-96) + attention gate"

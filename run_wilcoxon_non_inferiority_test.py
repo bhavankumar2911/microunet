@@ -128,6 +128,13 @@ COMPARISON_PAIRS = [
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (20-40-80) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (20-40-80) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (24-48-96) does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (24-48-96)",
         "skip_non_inferiority": False,
@@ -149,6 +156,20 @@ COMPARISON_PAIRS = [
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64) + triple convolution per block",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (10-20-40-80)",
         "skip_non_inferiority": False,
@@ -163,15 +184,15 @@ COMPARISON_PAIRS = [
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (12-24-48-96) cuts down parameters without significant loss in Dice.",
-        "comparison_label": "Depth-wise separable convolution + Additive skip connection (12-24-48-96)",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80) + attention gate",
         "skip_non_inferiority": False,
     },
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (14-28-56-112) cuts down parameters without significant loss in Dice.",
-        "comparison_label": "Depth-wise separable convolution + Additive skip connection (14-28-56-112)",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80) + triple convolution per block",
         "skip_non_inferiority": False,
     },
     {
@@ -184,8 +205,36 @@ COMPARISON_PAIRS = [
     {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (12-24-48-96) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + Additive skip connection (12-24-48-96)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48-96) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48-96) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) does not lose much in Dice.",
         "comparison_label": "Depth-wise separable layers (14-28-56-112)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (14-28-56-112) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + Additive skip connection (14-28-56-112)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (14-28-56-112) + attention gate",
         "skip_non_inferiority": False,
     },
     {

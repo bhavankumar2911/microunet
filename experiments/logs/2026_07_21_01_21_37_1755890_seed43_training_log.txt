@@ -1,0 +1,23 @@
+Epoch 001/100 | Train Loss: 3.5909 | Val Loss: 3.4348 | Val Dice: 0.1665
+Epoch 002/100 | Train Loss: 3.3108 | Val Loss: 3.1857 | Val Dice: 0.3612
+Epoch 003/100 | Train Loss: 3.0625 | Val Loss: 2.9429 | Val Dice: 0.4041
+Epoch 004/100 | Train Loss: 2.8338 | Val Loss: 2.7295 | Val Dice: 0.4492
+Epoch 005/100 | Train Loss: 2.6260 | Val Loss: 2.5347 | Val Dice: 0.4496
+Epoch 006/100 | Train Loss: 2.4375 | Val Loss: 2.3592 | Val Dice: 0.4681
+Epoch 007/100 | Train Loss: 2.2684 | Val Loss: 2.2075 | Val Dice: 0.4800
+Epoch 008/100 | Train Loss: 2.1197 | Val Loss: 2.0684 | Val Dice: 0.4797
+Epoch 009/100 | Train Loss: 1.9861 | Val Loss: 1.9503 | Val Dice: 0.4856
+Epoch 010/100 | Train Loss: 1.8690 | Val Loss: 1.8489 | Val Dice: 0.4979
+Epoch 011/100 | Train Loss: 1.7671 | Val Loss: 1.7557 | Val Dice: 0.5135
+Epoch 012/100 | Train Loss: 1.6776 | Val Loss: 1.6690 | Val Dice: 0.5306
+Epoch 013/100 | Train Loss: 1.6000 | Val Loss: 1.5974 | Val Dice: 0.5216
+Epoch 014/100 | Train Loss: 1.5300 | Val Loss: 1.5381 | Val Dice: 0.4950
+Epoch 015/100 | Train Loss: 1.4676 | Val Loss: 1.4784 | Val Dice: 0.4850
+Epoch 016/100 | Train Loss: 1.4125 | Val Loss: 1.4289 | Val Dice: 0.4924
+Epoch 017/100 | Train Loss: 1.3657 | Val Loss: 1.3853 | Val Dice: 0.4950
+Epoch 018/100 | Train Loss: 1.3253 | Val Loss: 1.3524 | Val Dice: 0.5035
+Epoch 019/100 | Train Loss: 1.2910 | Val Loss: 1.3204 | Val Dice: 0.5123
+Epoch 020/100 | Train Loss: 1.2604 | Val Loss: 1.2928 | Val Dice: 0.5046
+Epoch 021/100 | Train Loss: 1.2377 | Val Loss: 1.2694 | Val Dice: 0.5101
+Epoch 022/100 | Train Loss: 1.2108 | Val Loss: 1.2505 | Val Dice: 0.4821
+Early stopping at epoch 22: validation Dice has not improved beyond 0.5306 by more than 0.0010 for 10 consecutive epochs.
