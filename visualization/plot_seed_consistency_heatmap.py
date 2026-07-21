@@ -27,6 +27,8 @@ BINARY_SEGMENTATION_DATASET_NAMES = {
     "Promise12", "RoboTool", "TnbcNuclei", "UltrasoundNerve", "USforKidney",
     "UwSkinCancer", "Yeaz",
 }
+FIXED_INTENSITY_SCALE_MINIMUM = 0.0
+FIXED_INTENSITY_SCALE_MAXIMUM = 1.0
 
 
 def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
@@ -104,8 +106,8 @@ def save_seed_consistency_heatmap(
         masked_std_grid,
         aspect="auto",
         cmap=colormap,
-        vmin=0.0,
-        vmax=np.nanmax(std_grid) if not np.all(np.isnan(std_grid)) else 1.0,
+        vmin=FIXED_INTENSITY_SCALE_MINIMUM,
+        vmax=FIXED_INTENSITY_SCALE_MAXIMUM,
         interpolation="nearest",
     )
 
@@ -113,7 +115,7 @@ def save_seed_consistency_heatmap(
         for column_index in range(number_of_datasets):
             cell_value = std_grid[row_index][column_index]
             if not np.isnan(cell_value):
-                normalized_value = cell_value / (np.nanmax(std_grid) or 1.0)
+                normalized_value = cell_value / FIXED_INTENSITY_SCALE_MAXIMUM
                 text_color = "white" if normalized_value > 0.6 else "black"
                 axes.text(
                     column_index,
@@ -221,15 +223,15 @@ def generate_and_save_seed_consistency_heatmap(
 def parse_command_line_arguments():
     argument_parser = argparse.ArgumentParser(
         description=(
-            "Save a seed consistency heatmap: rows=datasets, columns=ablations, "
-            "cell color=std_val_dice across seeds. Darker = more seed variance."
+            "Save a seed consistency heatmap: rows=hypotheses, columns=datasets, "
+            "cell color=std_val_dice across seeds on a fixed 0-1 scale. Darker = more seed variance."
         )
     )
     argument_parser.add_argument(
         "--hypothesis-texts",
         required=True,
         nargs="+",
-        help="One or more hypothesis texts (one per column in the heatmap)",
+        help="One or more hypothesis texts (one per row in the heatmap)",
     )
     argument_parser.add_argument(
         "--hypothesis-labels",

@@ -6,112 +6,326 @@ PLOT_ABLATION_DELTA_DOT_PLOT_SCRIPT_PATH = Path(__file__).parent / "plot_ablatio
 EXPERIMENTS_CSV_PATH = "../experiments/experiments_large.csv"
 OUTPUT_BASE_FOLDER = Path("ablation/dice")
 
-HYPOTHESIS_NAIVE_BASELINE = "No hypothesis -  naive."
-HYPOTHESIS_INSTANCE_NORM = "No hypothesis - instance normalization."
-HYPOTHESIS_DATA_AUGMENTATION_AND_INSTANCE_NORM = "No hypothesis -  data augmentation + instance norm."
-STABLE_BASELINE = "No hypothesis -  data augmentation + instance norm + kaiming normal."
-HYPOTHESIS_ATTENTION_GATE = "Using attention gates help in improving the dice."
-HYPOTHESIS_DS_CONV = "Depth-wise separable layers does not lose much in Dice."
-HYPOTHESIS_DS_CONV_64 = "Depth-wise separable layers does not lose much in Dice (64 bottleneck)."
-HYPOTHESIS_DS_CONV_RES_CONN = "Using residual connections help in improving the dice."
-HYPOTHESIS_ADDITIVE_SKIP_CONNECTIONS = "Additive skip connection cuts down parameters greatly without significant loss in Dice."
-
 ABLATIONS_TO_PLOT = [
     {
-        "baseline_hypothesis": HYPOTHESIS_NAIVE_BASELINE,
-        "baseline_label": "Naive Baseline",
-        "comparison_hypothesis": HYPOTHESIS_INSTANCE_NORM,
-        "comparison_label": "Instance Norm",
-        "hide_parameter_lines": True,
-        "output_file": OUTPUT_BASE_FOLDER / "batch_norm_baseline_vs_instance_norm.png",
-    },
-    {
-        "baseline_hypothesis": HYPOTHESIS_INSTANCE_NORM,
-        "baseline_label": "Instance Norm",
-        "comparison_hypothesis": HYPOTHESIS_DATA_AUGMENTATION_AND_INSTANCE_NORM,
-        "comparison_label": "Data Augmentation + Instance Norm",
-        "hide_parameter_lines": True,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "instance_norm_vs_data_augmentation.png",
-    },
-    {
-        "baseline_hypothesis": HYPOTHESIS_DATA_AUGMENTATION_AND_INSTANCE_NORM,
-        "baseline_label": "Data Augmentation + Instance Norm",
-        "comparison_hypothesis": STABLE_BASELINE,
-        "comparison_label": "Data Augmentation + Instance Norm + Kaiming Normal",
-        "hide_parameter_lines": True,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "data_augmentation" / "data_augmentation_vs_kaiming_normal.png",
-    },
-    {
-        "baseline_hypothesis": STABLE_BASELINE,
-        "baseline_label": "Data Augmentation + Instance Norm + Kaiming Normal",
-        "comparison_hypothesis": HYPOTHESIS_ATTENTION_GATE,
-        "comparison_label": "Attention Gate",
-        "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "data_augmentation" / "kaiming_normal" / "attention_gate_vs_kaiming_normal.png",
-    },
-    {
-        "baseline_hypothesis": STABLE_BASELINE,
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": HYPOTHESIS_DS_CONV,
-        "comparison_label": "Depth-wise separable convolution",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32) with three convolutions per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32) + triple convolution",
         "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "stable_basline_vs_ds_conv.png",
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32" / "triple_convolution" / "stable_baseline_vs_ds_conv_8_16_32_triple_convolution.png",
     },
     {
-        "baseline_hypothesis": HYPOTHESIS_DS_CONV,
-        "baseline_label": "Depth-wise separable convolution(52 BN-C)",
-        "comparison_hypothesis": HYPOTHESIS_DS_CONV_64,
-        "comparison_label": "Depth-wise separable convolution(64 BN-C)",
-        "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "ds_conv" / "ds_conv_52_vs_ds_conv_64.png",
-    },
-    {
-        "baseline_hypothesis": STABLE_BASELINE,
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": HYPOTHESIS_DS_CONV_64,
-        "comparison_label": "Depth-wise separable convolution(64 BN-C)",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32) + triple convolution + residual block per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32) + triple convolution + residual block",
         "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "stable_baseline_vs_ds_conv_64.png",
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32" / "triple_convolution" / "residual_block" / "stable_baseline_vs_ds_conv_8_16_32_triple_convolution_residual_block.png",
     },
     {
-        "baseline_hypothesis": HYPOTHESIS_DS_CONV_64,
-        "baseline_label": "Depth-wise separable convolution(64 BN-C)",
-        "comparison_hypothesis": HYPOTHESIS_ATTENTION_GATE,
-        "comparison_label": "DS Conv(64 BN-C) + Attention Gate",
-        "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "ds_conv" / "64_bnc" / "ds_conv_64_bnc_vs_attention.png",
-    },
-    {
-        "baseline_hypothesis": STABLE_BASELINE,
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": HYPOTHESIS_ATTENTION_GATE,
-        "comparison_label": "DS Conv(64 BN-C) + Attention Gate",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48) + triple convolution",
         "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "stable_baseline_vs_ds_conv_64_bnc_attention.png",
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48" / "triple_convolution" / "stable_baseline_vs_ds_conv_12_24_48_triple_convolution.png",
     },
     {
-        "baseline_hypothesis": STABLE_BASELINE,
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": HYPOTHESIS_DS_CONV_RES_CONN,
-        "comparison_label": "DS Conv(64 BN-C) + Residual Block",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48) + triple convolution + residual block per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48) + triple convolution + residual block",
         "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "stable_baseline_vs_ds_conv_64_res_block.png",
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48" / "triple_convolution" / "residual_block" / "stable_baseline_vs_ds_conv_12_24_48_triple_convolution_residual_block.png",
     },
     {
-        "baseline_hypothesis": HYPOTHESIS_DS_CONV_64,
-        "baseline_label": "Depth-wise separable convolution(64 BN-C)",
-        "comparison_hypothesis": HYPOTHESIS_DS_CONV_RES_CONN,
-        "comparison_label": "DS Conv(64 BN-C) + Residual Block",
-        "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "ds_conv" / "64_bnc" / "ds_conv_64_bnc_vs_res_block.png",
-    },
-    {
-        "baseline_hypothesis": STABLE_BASELINE,
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
-        "comparison_hypothesis": HYPOTHESIS_ADDITIVE_SKIP_CONNECTIONS,
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48) + triple convolution per block + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48) + triple convolution per block + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48" / "triple_convolution" / "attention_gate" / "stable_baseline_vs_ds_conv_12_24_48_triple_convolution_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64" / "stable_baseline_vs_ds_conv_16_32_64.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64" / "triple_convolution" / "stable_baseline_vs_ds_conv_16_32_64_triple_convolution.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64" / "attention_gate" / "stable_baseline_vs_ds_conv_16_32_64_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution + residual block per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution + residual block",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64" / "triple_convolution" / "residual_block" / "stable_baseline_vs_ds_conv_16_32_64_triple_convolution_residual_block.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64" / "triple_convolution" / "attention_gate" / "stable_baseline_vs_ds_conv_16_32_64_triple_convolution_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (18-36-72) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (18-36-72)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_18_36_72" / "stable_baseline_vs_ds_conv_18_36_72.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (18-36-72) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (18-36-72) + triple convolution",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_18_36_72" / "triple_convolution" / "stable_baseline_vs_ds_conv_18_36_72_triple_convolution.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (18-36-72) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (18-36-72) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_18_36_72" / "attention_gate" / "stable_baseline_vs_ds_conv_18_36_72_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (20-40-80) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_20_40_80" / "stable_baseline_vs_ds_conv_20_40_80.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (20-40-80) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (20-40-80) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_20_40_80" / "attention_gate" / "stable_baseline_vs_ds_conv_20_40_80_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (24-48-96) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (24-48-96)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_24_48_96" / "stable_baseline_vs_ds_conv_24_48_96.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-52) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-52)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32_52" / "stable_baseline_vs_ds_conv_8_16_32_52.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32_64" / "stable_baseline_vs_ds_conv_8_16_32_64.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32_64" / "attention_gate" / "stable_baseline_vs_ds_conv_8_16_32_64_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64) + triple convolution per block",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32_64" / "triple_convolution" / "stable_baseline_vs_ds_conv_8_16_32_64_triple_convolution.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_10_20_40_80" / "stable_baseline_vs_ds_conv_10_20_40_80.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (10-20-40-80) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + Additive skip connection (10-20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_10_20_40_80" / "additive_skip_connection" / "stable_baseline_vs_ds_conv_10_20_40_80_additive_skip_connection.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_10_20_40_80" / "attention_gate" / "stable_baseline_vs_ds_conv_10_20_40_80_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80) + triple convolution per block",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_10_20_40_80" / "triple_convolution" / "stable_baseline_vs_ds_conv_10_20_40_80_triple_convolution.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48-96) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48-96)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48_96" / "stable_baseline_vs_ds_conv_12_24_48_96.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (12-24-48-96) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + Additive skip connection (12-24-48-96)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48_96" / "additive_skip_connection" / "stable_baseline_vs_ds_conv_12_24_48_96_additive_skip_connection.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48-96) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48-96) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_12_24_48_96" / "attention_gate" / "stable_baseline_vs_ds_conv_12_24_48_96_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (14-28-56-112)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_14_28_56_112" / "stable_baseline_vs_ds_conv_14_28_56_112.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (14-28-56-112) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + Additive skip connection (14-28-56-112)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_14_28_56_112" / "additive_skip_connection" / "stable_baseline_vs_ds_conv_14_28_56_112_additive_skip_connection.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (14-28-56-112) + attention gate",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_14_28_56_112" / "attention_gate" / "stable_baseline_vs_ds_conv_14_28_56_112_attention_gate.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution (16, 32, 64, 128) helps in great parameter reduction without significant loss in dice.",
+        "comparison_label": "Depth-wise separable convolution (16, 32, 64, 128)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_16_32_64_128" / "stable_baseline_vs_ds_conv_16_32_64_128.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (4-8-16-32-64) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (4-8-16-32-64)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_4_8_16_32_64" / "stable_baseline_vs_ds_conv_4_8_16_32_64.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (5-10-20-40-80) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (5-10-20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_5_10_20_40_80" / "stable_baseline_vs_ds_conv_5_10_20_40_80.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (8-16-32-64-128) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (8-16-32-64-128)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "ds_conv_8_16_32_64_128" / "stable_baseline_vs_ds_conv_8_16_32_64_128.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Additive skip connection cuts down parameters without significant loss in Dice.",
         "comparison_label": "Additive skip connection",
         "hide_parameter_lines": False,
-        "output_file": OUTPUT_BASE_FOLDER / "instance_normalization" / "kaiming_normal" / "stable_baseline_vs_additive_skip_connection.png",
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "additive_skip_connection" / "stable_baseline_vs_additive_skip_connection.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Single convolution per block (8-16-32-52) cuts down parameters greatly without significant loss in Dice.",
+        "comparison_label": "Single convolution per block (8-16-32-52)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "single_convolution_per_block_8_16_32_52" / "stable_baseline_vs_single_convolution_per_block_8_16_32_52.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Single convolution per block (8-16-32-64) cuts down parameters greatly without significant loss in Dice.",
+        "comparison_label": "Single convolution per block (8-16-32-64)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "single_convolution_per_block_8_16_32_64" / "stable_baseline_vs_single_convolution_per_block_8_16_32_64.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Single convolution per block (10-20-40-80) cuts down parameters greatly without significant loss in Dice.",
+        "comparison_label": "Single convolution per block (10-20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "single_convolution_per_block_10_20_40_80" / "stable_baseline_vs_single_convolution_per_block_10_20_40_80.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Single convolution per block (4-8-16-32-64) cuts down parameters greatly without significant loss in Dice.",
+        "comparison_label": "Single convolution per block (4-8-16-32-64)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "single_convolution_per_block_4_8_16_32_64" / "stable_baseline_vs_single_convolution_per_block_4_8_16_32_64.png",
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Single convolution per block (5-10-20-40-80) cuts down parameters greatly without significant loss in Dice.",
+        "comparison_label": "Single convolution per block (5-10-20-40-80)",
+        "hide_parameter_lines": False,
+        "output_file": OUTPUT_BASE_FOLDER / "stable_baseline" / "single_convolution_per_block_5_10_20_40_80" / "stable_baseline_vs_single_convolution_per_block_5_10_20_40_80.png",
     },
 ]
 
@@ -124,12 +338,17 @@ def run_delta_dot_plot_for_ablation(
     output_file,
     chart_title=None,
     hide_parameter_lines=False,
+    force_recreate=False,
 ):
     print(f"\n{'=' * 70}")
     print(f"Baseline   : {baseline_label!r}")
     print(f"Comparison : {comparison_label!r}")
     print(f"Output     : {output_file}")
     print(f"{'=' * 70}\n")
+
+    if not force_recreate and output_file.exists():
+        print(f"Skipping: image already exists at {output_file} (use --force-recreate to redo this).")
+        return
 
     command = [
         "python3",
@@ -153,7 +372,7 @@ def run_delta_dot_plot_for_ablation(
         print(f"\nWARNING: Script exited with code {result.returncode} for: {comparison_label!r}")
 
 
-def run_all_ablation_delta_dot_plots():
+def run_all_ablation_delta_dot_plots(force_recreate=False):
     print(f"Running delta dot plots for {len(ABLATIONS_TO_PLOT)} sequential ablation(s).\n")
 
     for ablation in ABLATIONS_TO_PLOT:
@@ -165,6 +384,7 @@ def run_all_ablation_delta_dot_plots():
             output_file=ablation["output_file"],
             chart_title=ablation.get("chart_title"),
             hide_parameter_lines=ablation.get("hide_parameter_lines", True),
+            force_recreate=force_recreate,
         )
 
     print(f"\n{'=' * 70}")
@@ -173,4 +393,16 @@ def run_all_ablation_delta_dot_plots():
 
 
 if __name__ == "__main__":
-    run_all_ablation_delta_dot_plots()
+    import argparse
+
+    argument_parser = argparse.ArgumentParser(
+        description="Run delta dot plotting for every configured ablation, skipping ablations whose image already exists."
+    )
+    argument_parser.add_argument(
+        "--force-recreate",
+        action="store_true",
+        help="Recreate images even if they already exist.",
+    )
+    arguments = argument_parser.parse_args()
+
+    run_all_ablation_delta_dot_plots(force_recreate=arguments.force_recreate)
