@@ -23,13 +23,17 @@ EXPERIMENTS_CONFIGS_DIR  = Path("experiments/configs")
 TRAINED_MODELS_DIRECTORY = Path("experiments/models")
 
 DEFAULT_HYPOTHESES = [
-    "Depth-wise separable layers (24-48-96) does not lose much in Dice.",
-    "Depth-wise separable layers (16-32-64) + triple convolution per block does not lose much in Dice.",
-    "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate does not lose much in Dice.",
+    "Stable Baseline (Instance norm + Kaiming normal)",
     "Depth-wise separable layers (14-28-56-112) does not lose much in Dice.",
     "Depth-wise separable convolution with additive skip connection (14-28-56-112) cuts down parameters without significant loss in Dice.",
+    "Depth-wise separable layers (14-28-56-112) + attention gate does not lose much in Dice.",
+    "Depth-wise separable convolution (16, 32, 64, 128) helps in great parameter reduction without significant loss in dice.",
     "Depth-wise separable layers (12-24-48-96) does not lose much in Dice.",
+    "Depth-wise separable layers (12-24-48-96) + attention gate does not lose much in Dice.",
     "Depth-wise separable layers (10-20-40-80) does not lose much in Dice.",
+    "Depth-wise separable layers (10-20-40-80) + attention gate does not lose much in Dice.",
+    "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate does not lose much in Dice.",
+    "Depth-wise separable layers (16-32-64) + triple convolution per block does not lose much in Dice.",
 ]
 
 EVALUATIONS_CSV_HEADERS = [
