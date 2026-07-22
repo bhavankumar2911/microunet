@@ -29,9 +29,13 @@ BINARY_SEGMENTATION_DATASET_NAMES = {
 }
 FIXED_INTENSITY_SCALE_MINIMUM = 0.0
 FIXED_INTENSITY_SCALE_MAXIMUM = 1.0
+SOURCE_COLUMN_NAMES = {
+    "validation": {"std_dice_column": "std_val_dice",  "default_csv": "../experiments/experiments_large.csv"},
+    "test":       {"std_dice_column": "std_test_dice", "default_csv": "../experiments/evaluations.csv"},
+}
 
 
-def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
+def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep, std_dice_column):
     experiment_rows = []
     with open(csv_path, "r", newline="") as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -43,7 +47,7 @@ def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
                 "run_id": row["run_id"].strip(),
                 "dataset": dataset_name,
                 "hypothesis": row["hypothesis"],
-                "std_val_dice": float(row["std_val_dice"]),
+                "std_val_dice": float(row[std_dice_column]),
             })
 
     experiment_rows.sort(key=lambda experiment_row: experiment_row["run_id"])
@@ -192,11 +196,13 @@ def generate_and_save_seed_consistency_heatmap(
     hypothesis_labels,
     chart_title,
     output_file_path,
+    source,
 ):
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
+    std_dice_column = SOURCE_COLUMN_NAMES[source]["std_dice_column"]
     experiment_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
-        experiments_csv_path, datasets_to_display
+        experiments_csv_path, datasets_to_display, std_dice_column
     )
     latest_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
         experiment_rows_sorted_by_run_id
@@ -220,24 +226,79 @@ def generate_and_save_seed_consistency_heatmap(
     )
 
 
+def generate_and_save_cross_source_seed_consistency_heatmap(
+    hypothesis_text,
+    hypothesis_label,
+    datasets_to_display,
+    validation_experiments_csv_path,
+    test_experiments_csv_path,
+    chart_title,
+    output_file_path,
+):
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    validation_std_dice_column = SOURCE_COLUMN_NAMES["validation"]["std_dice_column"]
+    test_std_dice_column       = SOURCE_COLUMN_NAMES["test"]["std_dice_column"]
+
+    validation_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
+        validation_experiments_csv_path, datasets_to_display, validation_std_dice_column
+    )
+    test_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
+        test_experiments_csv_path, datasets_to_display, test_std_dice_column
+    )
+
+    latest_validation_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
+        validation_rows_sorted_by_run_id
+    )
+    latest_test_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
+        test_rows_sorted_by_run_id
+    )
+
+    row_labels = ["Validation", "Test"]
+    std_grid = np.full((2, len(datasets_to_display)), fill_value=np.nan)
+
+    for column_index, dataset_name in enumerate(datasets_to_display):
+        lookup_key = (dataset_name, hypothesis_text)
+        if lookup_key in latest_validation_experiment_by_dataset_and_hypothesis:
+            std_grid[0][column_index] = latest_validation_experiment_by_dataset_and_hypothesis[lookup_key]["std_val_dice"]
+        if lookup_key in latest_test_experiment_by_dataset_and_hypothesis:
+            std_grid[1][column_index] = latest_test_experiment_by_dataset_and_hypothesis[lookup_key]["std_val_dice"]
+
+    missing_cells = int(np.sum(np.isnan(std_grid)))
+    print(f"Datasets: {len(datasets_to_display)}, Hypothesis: {hypothesis_label!r}")
+    print(f"Missing cells (no matching run): {missing_cells}")
+
+    resolved_chart_title = chart_title or f"Seed Consistency: Validation vs. Test — {hypothesis_label}"
+
+    save_seed_consistency_heatmap(
+        datasets_to_display,
+        row_labels,
+        std_grid,
+        resolved_chart_title,
+        output_file_path,
+    )
+
+
 def parse_command_line_arguments():
     argument_parser = argparse.ArgumentParser(
         description=(
             "Save a seed consistency heatmap: rows=hypotheses, columns=datasets, "
-            "cell color=std_val_dice across seeds on a fixed 0-1 scale. Darker = more seed variance."
+            "cell color=std_val_dice or std_test_dice across seeds on a fixed 0-1 scale. Darker = more seed variance."
         )
     )
     argument_parser.add_argument(
         "--hypothesis-texts",
-        required=True,
+        required=False,
         nargs="+",
-        help="One or more hypothesis texts (one per row in the heatmap)",
+        default=None,
+        help="One or more hypothesis texts (one per row in the heatmap). Required unless --cross-source is set.",
     )
     argument_parser.add_argument(
         "--hypothesis-labels",
-        required=True,
+        required=False,
         nargs="+",
-        help="Short display labels for each hypothesis (same order as --hypothesis-texts)",
+        default=None,
+        help="Short display labels for each hypothesis (same order as --hypothesis-texts). Required unless --cross-source is set.",
     )
     argument_parser.add_argument(
         "--output-file",
@@ -246,13 +307,48 @@ def parse_command_line_arguments():
     )
     argument_parser.add_argument(
         "--chart-title",
-        default="Seed Consistency Heatmap: Std Val Dice Across Ablations",
-        help="Chart title",
+        default=None,
+        help="Chart title (default: auto-generated based on --source)",
+    )
+    argument_parser.add_argument(
+        "--source",
+        choices=["validation", "test"],
+        default="validation",
+        help="Whether to read validation-set std_val_dice or held-out test-set std_test_dice (default: validation). Ignored when --cross-source is set.",
     )
     argument_parser.add_argument(
         "--experiments-csv",
+        default=None,
+        help="Path to the results CSV. Defaults to experiments/experiments_large.csv for --source validation, "
+             "or experiments/evaluations.csv for --source test. Ignored when --cross-source is set.",
+    )
+    argument_parser.add_argument(
+        "--cross-source",
+        action="store_true",
+        default=False,
+        help="Instead of comparing multiple hypotheses within one source, compare ONE hypothesis "
+             "(given via --hypothesis-text) across validation vs. test. "
+             "--hypothesis-texts, --hypothesis-labels, --source, and --experiments-csv are ignored in this mode.",
+    )
+    argument_parser.add_argument(
+        "--hypothesis-text",
+        default=None,
+        help="The single hypothesis to compare across validation vs. test. Required when --cross-source is set.",
+    )
+    argument_parser.add_argument(
+        "--hypothesis-label",
+        default=None,
+        help="Short display label for --hypothesis-text. Required when --cross-source is set.",
+    )
+    argument_parser.add_argument(
+        "--validation-experiments-csv",
         default="../experiments/experiments_large.csv",
-        help="Path to experiments_large.csv (default: ../experiments/experiments_large.csv)",
+        help="Validation-set results CSV, used only with --cross-source (default: experiments/experiments_large.csv)",
+    )
+    argument_parser.add_argument(
+        "--test-experiments-csv",
+        default="../experiments/evaluations.csv",
+        help="Test-set results CSV, used only with --cross-source (default: experiments/evaluations.csv)",
     )
     return argument_parser.parse_args()
 
@@ -260,19 +356,43 @@ def parse_command_line_arguments():
 if __name__ == "__main__":
     arguments = parse_command_line_arguments()
 
-    if len(arguments.hypothesis_texts) != len(arguments.hypothesis_labels):
-        raise ValueError(
-            f"--hypothesis-texts has {len(arguments.hypothesis_texts)} entries but "
-            f"--hypothesis-labels has {len(arguments.hypothesis_labels)} entries — they must match."
-        )
-
     datasets_to_display = order_datasets_binary_segmentation_first(DEFAULT_DATASETS)
 
-    generate_and_save_seed_consistency_heatmap(
-        experiments_csv_path=Path(arguments.experiments_csv),
-        datasets_to_display=datasets_to_display,
-        hypothesis_texts=arguments.hypothesis_texts,
-        hypothesis_labels=arguments.hypothesis_labels,
-        chart_title=arguments.chart_title,
-        output_file_path=Path(arguments.output_file),
-    )
+    if arguments.cross_source:
+        if not arguments.hypothesis_text or not arguments.hypothesis_label:
+            raise ValueError("--cross-source requires both --hypothesis-text and --hypothesis-label.")
+
+        generate_and_save_cross_source_seed_consistency_heatmap(
+            hypothesis_text=arguments.hypothesis_text,
+            hypothesis_label=arguments.hypothesis_label,
+            datasets_to_display=datasets_to_display,
+            validation_experiments_csv_path=Path(arguments.validation_experiments_csv),
+            test_experiments_csv_path=Path(arguments.test_experiments_csv),
+            chart_title=arguments.chart_title,
+            output_file_path=Path(arguments.output_file),
+        )
+    else:
+        if not arguments.hypothesis_texts or not arguments.hypothesis_labels:
+            raise ValueError("--hypothesis-texts and --hypothesis-labels are required unless --cross-source is set.")
+
+        if len(arguments.hypothesis_texts) != len(arguments.hypothesis_labels):
+            raise ValueError(
+                f"--hypothesis-texts has {len(arguments.hypothesis_texts)} entries but "
+                f"--hypothesis-labels has {len(arguments.hypothesis_labels)} entries — they must match."
+            )
+
+        experiments_csv_path = Path(arguments.experiments_csv) if arguments.experiments_csv else Path(SOURCE_COLUMN_NAMES[arguments.source]["default_csv"])
+        chart_title = arguments.chart_title or (
+            "Seed Consistency Heatmap: Std Test Dice Across Ablations" if arguments.source == "test"
+            else "Seed Consistency Heatmap: Std Val Dice Across Ablations"
+        )
+
+        generate_and_save_seed_consistency_heatmap(
+            experiments_csv_path=experiments_csv_path,
+            datasets_to_display=datasets_to_display,
+            hypothesis_texts=arguments.hypothesis_texts,
+            hypothesis_labels=arguments.hypothesis_labels,
+            chart_title=chart_title,
+            source=arguments.source,
+            output_file_path=Path(arguments.output_file),
+        )
