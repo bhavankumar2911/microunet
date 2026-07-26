@@ -9,6 +9,14 @@ from scipy.stats import wilcoxon
 
 EXPERIMENTS_CSV_PATH = Path("experiments/experiments_large.csv")
 OUTPUT_REPORT_FOLDER = Path("results/significance_tests")
+SOURCE_OUTPUT_FOLDERS = {
+    "validation": Path("results/significance_tests"),
+    "test":       Path("results/significance_tests/test_set"),
+}
+SOURCE_COLUMN_NAMES = {
+    "validation": {"mean_dice_column": "mean_val_dice",  "std_dice_column": "std_val_dice",  "default_csv": "experiments/experiments_large.csv"},
+    "test":       {"mean_dice_column": "mean_test_dice", "std_dice_column": "std_test_dice",  "default_csv": "experiments/evaluations.csv"},
+}
 DEFAULT_DATASETS = [
     "AbdomenUS", "Acdc", "Bbbc010", "BkaiIgh", "BriFiSeg",
     "Btcv", "Busi", "CellNuclei", "Chaos", "ChaseDB1",
@@ -310,8 +318,81 @@ COMPARISON_PAIRS = [
     },
 ]
 
+COMPARISON_PAIRS_TEST = [
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (14-28-56-112)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution with additive skip connection (14-28-56-112) cuts down parameters without significant loss in Dice.",
+        "comparison_label": "Depth-wise separable convolution + additive skip connection (14-28-56-112)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (14-28-56-112) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (14-28-56-112) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable convolution (16, 32, 64, 128) helps in great parameter reduction without significant loss in dice.",
+        "comparison_label": "Depth-wise separable convolution (16, 32, 64, 128)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48-96) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48-96)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (12-24-48-96) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (12-24-48-96) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80)",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (10-20-40-80) + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (10-20-40-80) + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution per block + attention gate",
+        "skip_non_inferiority": False,
+    },
+    {
+        "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "baseline_label": "Stable Baseline",
+        "comparison_hypothesis": "Depth-wise separable layers (16-32-64) + triple convolution per block does not lose much in Dice.",
+        "comparison_label": "Depth-wise separable layers (16-32-64) + triple convolution per block",
+        "skip_non_inferiority": False,
+    },
+]
 
-def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
+
+def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep, mean_dice_column, std_dice_column):
     experiment_rows = []
     with open(csv_path, "r", newline="") as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -323,8 +404,8 @@ def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
                 "run_id": row["run_id"].strip(),
                 "dataset": dataset_name,
                 "hypothesis": row["hypothesis"],
-                "mean_val_dice": float(row["mean_val_dice"]),
-                "std_val_dice": float(row["std_val_dice"]),
+                "mean_val_dice": float(row[mean_dice_column]),
+                "std_val_dice": float(row[std_dice_column]),
                 "parameters": int(float(row["parameters"])),
             })
 
@@ -553,11 +634,14 @@ def run_wilcoxon_analysis_for_all_pairs(
     dataset_names,
     comparison_pairs,
     output_report_folder,
+    source,
 ):
     output_report_folder.mkdir(parents=True, exist_ok=True)
 
+    column_names = SOURCE_COLUMN_NAMES[source]
     experiment_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
-        experiments_csv_path, dataset_names
+        experiments_csv_path, dataset_names,
+        column_names["mean_dice_column"], column_names["std_dice_column"]
     )
     latest_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
         experiment_rows_sorted_by_run_id
@@ -663,19 +747,29 @@ def parse_command_line_arguments():
     )
     argument_parser.add_argument(
         "--output-folder",
-        default=str(OUTPUT_REPORT_FOLDER),
-        help=f"Folder to save the markdown report (default: {OUTPUT_REPORT_FOLDER})",
+        default=None,
+        help="Folder to save the markdown report. Defaults to results/significance_tests for --source validation, "
+             "or results/significance_tests/test_set for --source test.",
+    )
+    argument_parser.add_argument(
+        "--source",
+        choices=["validation", "test"],
+        default="validation",
+        help="Whether to read validation-set results (mean_val_dice/std_val_dice) or held-out test-set results (mean_test_dice/std_test_dice) (default: validation)",
     )
     argument_parser.add_argument(
         "--experiments-csv",
-        default=str(EXPERIMENTS_CSV_PATH),
-        help=f"Path to experiments_large.csv (default: {EXPERIMENTS_CSV_PATH})",
+        default=None,
+        help="Path to the results CSV. Defaults to experiments/experiments_large.csv for --source validation, "
+             "or experiments/evaluations.csv for --source test.",
     )
     return argument_parser.parse_args()
 
 
 if __name__ == "__main__":
     arguments = parse_command_line_arguments()
+
+    experiments_csv_path = Path(arguments.experiments_csv) if arguments.experiments_csv else Path(SOURCE_COLUMN_NAMES[arguments.source]["default_csv"])
 
     single_pair_provided = (
         arguments.baseline_hypothesis is not None
@@ -693,11 +787,14 @@ if __name__ == "__main__":
             }
         ]
     else:
-        pairs_to_run = COMPARISON_PAIRS
+        pairs_to_run = COMPARISON_PAIRS_TEST if arguments.source == "test" else COMPARISON_PAIRS
+
+    output_report_folder = Path(arguments.output_folder) if arguments.output_folder else SOURCE_OUTPUT_FOLDERS[arguments.source]
 
     run_wilcoxon_analysis_for_all_pairs(
-        experiments_csv_path=Path(arguments.experiments_csv),
+        experiments_csv_path=experiments_csv_path,
         dataset_names=DEFAULT_DATASETS,
         comparison_pairs=pairs_to_run,
-        output_report_folder=Path(arguments.output_folder),
+        output_report_folder=output_report_folder,
+        source=arguments.source,
     )

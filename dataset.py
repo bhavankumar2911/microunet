@@ -1045,27 +1045,31 @@ def create_train_val_dataloaders(root_directory, training_config, validation_fra
 
 def create_test_dataloader(root_directory, training_config, validation_fraction=0.2, test_fraction=0.2):
     dataset_class = resolve_dataset_class_from_registry(training_config["dataset"])
+    use_color     = training_config.get("use_color_input", False)
 
-    if not getattr(dataset_class, "requires_patient_grouped_validation_split", False):
-        raise ValueError(
-            f"'{training_config['dataset']}' has no held-out test split in this codebase. "
-            "create_test_dataloader currently only supports the patient-grouped IMed-361M datasets "
-            "(Chaos, Acdc, MmWhsMr)."
+    if dataset_class.has_predefined_validation_split:
+        test_dataset = dataset_class(root_directory, training_config["image_size"], split="test", use_color_input=use_color)
+        test_dataloader = DataLoader(test_dataset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        print(f"Dataset: {training_config['dataset']} | {len(test_dataset)} held-out test samples")
+        return test_dataloader
+
+    if getattr(dataset_class, "requires_patient_grouped_validation_split", False):
+        data_split_seed = training_config.get("data_split_seed", 0)
+        full_dataset     = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
+
+        _, _, test_indices = split_indices_by_patient_group_three_way(
+            full_dataset.patient_grouping_keys,
+            validation_fraction,
+            test_fraction,
+            data_split_seed
         )
 
-    use_color       = training_config.get("use_color_input", False)
-    data_split_seed = training_config.get("data_split_seed", 0)
-    full_dataset    = dataset_class(root_directory, training_config["image_size"], split="training", use_color_input=use_color)
+        test_subset     = Subset(full_dataset, test_indices)
+        test_dataloader = DataLoader(test_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
+        print(f"Dataset: {training_config['dataset']} | {len(test_subset)} held-out test samples")
+        return test_dataloader
 
-    _, _, test_indices = split_indices_by_patient_group_three_way(
-        full_dataset.patient_grouping_keys,
-        validation_fraction,
-        test_fraction,
-        data_split_seed
+    raise ValueError(
+        f"'{training_config['dataset']}' has no held-out test split available in its source data. "
+        "This dataset only supports a random train/validation split with no separate test portion."
     )
-
-    test_subset    = Subset(full_dataset, test_indices)
-    test_dataloader = DataLoader(test_subset, batch_size=training_config["batch_size"], shuffle=False, num_workers=2)
-
-    print(f"Dataset: {training_config['dataset']} | {len(test_subset)} held-out test samples")
-    return test_dataloader

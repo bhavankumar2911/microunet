@@ -19,6 +19,10 @@ DEFAULT_DATASETS = [
 ]
 DEFAULT_BASELINE_HYPOTHESIS_TEXT = "No hypothesis -  naive."
 DEFAULT_BASELINE_SERIES_LABEL = "Baseline"
+SOURCE_COLUMN_NAMES = {
+    "validation": {"mean_dice_column": "mean_val_dice",  "std_dice_column": "std_val_dice",  "default_csv": "experiments/experiments_large.csv"},
+    "test":       {"mean_dice_column": "mean_test_dice", "std_dice_column": "std_test_dice",  "default_csv": "experiments/evaluations.csv"},
+}
 BINARY_SEGMENTATION_DATASET_NAMES = {
     "Bbbc010", "BriFiSeg", "Busi", "CellNuclei", "ChaseDB1", "Chuac",
     "Covid19Radio", "CovidQUEx", "CystoFluid", "Dca1", "Deepbacs", "Drive",
@@ -29,7 +33,7 @@ BINARY_SEGMENTATION_DATASET_NAMES = {
 }
 
 
-def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
+def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep, mean_dice_column, std_dice_column):
     experiment_rows = []
     with open(csv_path, "r", newline="") as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -42,8 +46,8 @@ def read_all_experiment_rows_sorted_by_run_id(csv_path, dataset_names_to_keep):
                 "dataset": dataset_name,
                 "hypothesis": row["hypothesis"],
                 "parameters": int(row["parameters"]),
-                "mean_val_dice": float(row["mean_val_dice"]),
-                "std_val_dice": float(row["std_val_dice"]),
+                "mean_val_dice": float(row[mean_dice_column]),
+                "std_val_dice": float(row[std_dice_column]),
             })
 
     experiment_rows.sort(key=lambda experiment_row: experiment_row["run_id"])
@@ -318,12 +322,15 @@ def generate_and_save_dice_delta_dot_plot(
     comparison_series_label,
     chart_title,
     output_file_path,
+    source,
     show_parameter_lines=True,
 ):
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
+    column_names = SOURCE_COLUMN_NAMES[source]
     experiment_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
-        experiments_csv_path, datasets_to_display
+        experiments_csv_path, datasets_to_display,
+        column_names["mean_dice_column"], column_names["std_dice_column"]
     )
     latest_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
         experiment_rows_sorted_by_run_id
@@ -351,6 +358,73 @@ def generate_and_save_dice_delta_dot_plot(
         baseline_series_label,
         comparison_series_label,
         chart_title,
+        output_file_path,
+        show_parameter_lines=show_parameter_lines,
+    )
+
+
+def generate_and_save_cross_source_dice_delta_dot_plot(
+    hypothesis_text,
+    series_label,
+    datasets_to_display,
+    validation_experiments_csv_path,
+    test_experiments_csv_path,
+    output_file_path,
+    chart_title=None,
+    show_parameter_lines=True,
+):
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    validation_column_names = SOURCE_COLUMN_NAMES["validation"]
+    test_column_names       = SOURCE_COLUMN_NAMES["test"]
+
+    validation_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
+        validation_experiments_csv_path, datasets_to_display,
+        validation_column_names["mean_dice_column"], validation_column_names["std_dice_column"]
+    )
+    test_rows_sorted_by_run_id = read_all_experiment_rows_sorted_by_run_id(
+        test_experiments_csv_path, datasets_to_display,
+        test_column_names["mean_dice_column"], test_column_names["std_dice_column"]
+    )
+
+    latest_validation_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
+        validation_rows_sorted_by_run_id
+    )
+    latest_test_experiment_by_dataset_and_hypothesis = keep_latest_run_per_dataset_and_hypothesis(
+        test_rows_sorted_by_run_id
+    )
+
+    validation_experiment_by_dataset = {}
+    test_experiment_by_dataset       = {}
+
+    for dataset_name in datasets_to_display:
+        lookup_key = (dataset_name, hypothesis_text)
+        if lookup_key in latest_validation_experiment_by_dataset_and_hypothesis:
+            validation_experiment_by_dataset[dataset_name] = latest_validation_experiment_by_dataset_and_hypothesis[lookup_key]
+        if lookup_key in latest_test_experiment_by_dataset_and_hypothesis:
+            test_experiment_by_dataset[dataset_name] = latest_test_experiment_by_dataset_and_hypothesis[lookup_key]
+
+    dataset_names_with_both_experiments = [
+        dataset_name for dataset_name in datasets_to_display
+        if dataset_name in validation_experiment_by_dataset and dataset_name in test_experiment_by_dataset
+    ]
+
+    print(f"Datasets with both validation and test results: {len(dataset_names_with_both_experiments)}")
+    datasets_missing_test_result = sorted(
+        set(datasets_to_display) - set(dataset_names_with_both_experiments)
+    )
+    if datasets_missing_test_result:
+        print(f"Datasets missing a validation or test result for this hypothesis: {datasets_missing_test_result}")
+
+    resolved_chart_title = chart_title or f"Δ Dice: Test vs. Validation — {series_label}"
+
+    save_dice_delta_dot_plot(
+        dataset_names_with_both_experiments,
+        validation_experiment_by_dataset,
+        test_experiment_by_dataset,
+        "Validation",
+        "Test",
+        resolved_chart_title,
         output_file_path,
         show_parameter_lines=show_parameter_lines,
     )
@@ -397,9 +471,34 @@ def parse_command_line_arguments():
         help="Hide the horizontal parameter count reference lines (shown by default)",
     )
     argument_parser.add_argument(
+        "--source",
+        choices=["validation", "test"],
+        default="validation",
+        help="Whether to read validation-set results (mean_val_dice/std_val_dice) or held-out test-set results (mean_test_dice/std_test_dice) (default: validation)",
+    )
+    argument_parser.add_argument(
         "--experiments-csv",
+        default=None,
+        help="Path to the results CSV. Defaults to experiments/experiments_large.csv for --source validation, "
+             "or experiments/evaluations.csv for --source test. Ignored when --cross-source is set.",
+    )
+    argument_parser.add_argument(
+        "--cross-source",
+        action="store_true",
+        default=False,
+        help="Instead of comparing two hypotheses within one source, compare ONE hypothesis "
+             "(given via --comparison-hypothesis) across validation vs. test. "
+             "--baseline-hypothesis, --baseline-label, --source, and --experiments-csv are ignored in this mode.",
+    )
+    argument_parser.add_argument(
+        "--validation-experiments-csv",
         default="../experiments/experiments_large.csv",
-        help="Path to experiments_large.csv (default: ../experiments/experiments_large.csv)",
+        help="Validation-set results CSV, used only with --cross-source (default: experiments/experiments_large.csv)",
+    )
+    argument_parser.add_argument(
+        "--test-experiments-csv",
+        default="../experiments/evaluations.csv",
+        help="Test-set results CSV, used only with --cross-source (default: experiments/evaluations.csv)",
     )
     return argument_parser.parse_args()
 
@@ -407,20 +506,35 @@ def parse_command_line_arguments():
 if __name__ == "__main__":
     arguments = parse_command_line_arguments()
 
-    chart_title = arguments.chart_title or (
-        f"Δ Dice: {arguments.comparison_label} vs. {arguments.baseline_label}"
-    )
-
     datasets_to_display = order_datasets_binary_segmentation_first(DEFAULT_DATASETS)
 
-    generate_and_save_dice_delta_dot_plot(
-        experiments_csv_path=Path(arguments.experiments_csv),
-        datasets_to_display=datasets_to_display,
-        baseline_hypothesis_text=arguments.baseline_hypothesis,
-        baseline_series_label=arguments.baseline_label,
-        comparison_hypothesis_text=arguments.comparison_hypothesis,
-        comparison_series_label=arguments.comparison_label,
-        chart_title=chart_title,
-        output_file_path=Path(arguments.output_file),
-        show_parameter_lines=not arguments.hide_parameter_lines,
-    )
+    if arguments.cross_source:
+        generate_and_save_cross_source_dice_delta_dot_plot(
+            hypothesis_text=arguments.comparison_hypothesis,
+            series_label=arguments.comparison_label,
+            datasets_to_display=datasets_to_display,
+            validation_experiments_csv_path=Path(arguments.validation_experiments_csv),
+            test_experiments_csv_path=Path(arguments.test_experiments_csv),
+            output_file_path=Path(arguments.output_file),
+            chart_title=arguments.chart_title,
+            show_parameter_lines=not arguments.hide_parameter_lines,
+        )
+    else:
+        experiments_csv_path = Path(arguments.experiments_csv) if arguments.experiments_csv else Path(SOURCE_COLUMN_NAMES[arguments.source]["default_csv"])
+
+        chart_title = arguments.chart_title or (
+            f"Δ Dice: {arguments.comparison_label} vs. {arguments.baseline_label}"
+        )
+
+        generate_and_save_dice_delta_dot_plot(
+            experiments_csv_path=experiments_csv_path,
+            datasets_to_display=datasets_to_display,
+            baseline_hypothesis_text=arguments.baseline_hypothesis,
+            baseline_series_label=arguments.baseline_label,
+            comparison_hypothesis_text=arguments.comparison_hypothesis,
+            comparison_series_label=arguments.comparison_label,
+            chart_title=chart_title,
+            output_file_path=Path(arguments.output_file),
+            source=arguments.source,
+            show_parameter_lines=not arguments.hide_parameter_lines,
+        )
