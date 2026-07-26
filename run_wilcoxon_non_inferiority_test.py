@@ -4,10 +4,10 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import false_discovery_control, wilcoxon
+from scipy.stats import wilcoxon
 
 
-P_VALUE_CORRECTION_METHODS = ["none", "bonferroni", "holm", "fdr_bh"]
+P_VALUE_CORRECTION_METHODS = ["none", "bonferroni"]
 
 
 EXPERIMENTS_CSV_PATH = Path("experiments/experiments_large.csv")
@@ -486,31 +486,25 @@ def apply_bonferroni_correction(p_values):
     return [min(p_value * number_of_tests, 1.0) for p_value in p_values]
 
 
-def apply_holm_correction(p_values):
-    number_of_tests = len(p_values)
-    indexed_p_values_sorted_ascending = sorted(enumerate(p_values), key=lambda indexed_p_value: indexed_p_value[1])
-
-    adjusted_p_values = [0.0] * number_of_tests
-    running_maximum_adjusted_p_value = 0.0
-
-    for rank, (original_index, p_value) in enumerate(indexed_p_values_sorted_ascending):
-        candidate_adjusted_p_value = p_value * (number_of_tests - rank)
-        running_maximum_adjusted_p_value = max(running_maximum_adjusted_p_value, candidate_adjusted_p_value)
-        adjusted_p_values[original_index] = min(running_maximum_adjusted_p_value, 1.0)
-
-    return adjusted_p_values
-
-
 def apply_p_value_correction(p_values, correction_method):
     if correction_method == "none":
         return list(p_values)
     if correction_method == "bonferroni":
         return apply_bonferroni_correction(p_values)
-    if correction_method == "holm":
-        return apply_holm_correction(p_values)
-    if correction_method == "fdr_bh":
-        return list(false_discovery_control(p_values, method="bh"))
     raise ValueError(f"Unknown p-value correction method: {correction_method!r}. Choose from {P_VALUE_CORRECTION_METHODS}.")
+
+
+
+def apply_fixed_family_size_correction_to_single_p_value(p_value, number_of_pairs_in_family, correction_method):
+    """
+    Corrects ONE p-value (e.g. the non-inferiority p-value at one delta, for one hypothesis
+    pair) using a fixed family size of number_of_pairs_in_family, WITHOUT needing the other
+    p-values in that family: corrected_p = min(p * M, 1.0). This is the exact Bonferroni
+    correction, applied independently at every delta in the sweep.
+    """
+    if correction_method == "none":
+        return p_value
+    return min(p_value * number_of_pairs_in_family, 1.0)
 
 
 def build_report_lines_for_pair(
@@ -524,6 +518,7 @@ def build_report_lines_for_pair(
     skip_non_inferiority,
     correction_method,
     corrected_superiority_p_value,
+    number_of_pairs_in_family,
 ):
     dice_deltas = [
         comparison - baseline
@@ -596,31 +591,53 @@ def build_report_lines_for_pair(
             "within tolerance δ.*"
         )
         left_column_lines.append("")
-        left_column_lines.append("| δ | W | p-value | Result | Interpretation |")
-        left_column_lines.append("|---|---|---------|--------|----------------|")
+        if correction_method == "none":
+            left_column_lines.append("| δ | W | p-value | Result | Interpretation |")
+            left_column_lines.append("|---|---|---------|--------|----------------|")
+        else:
+            left_column_lines.append(f"| δ | W | Raw p-value | Corrected p-value ({correction_method}) | Result | Interpretation |")
+            left_column_lines.append("|---|---|-------------|---------------------------------------|--------|----------------|")
 
         first_significant_delta = None
         for delta in DELTA_VALUES_TO_TEST:
-            statistic, p_value = run_non_inferiority_wilcoxon_test_for_delta(
+            statistic, raw_p_value = run_non_inferiority_wilcoxon_test_for_delta(
                 baseline_dice_values, comparison_dice_values, delta
             )
-            significant = p_value < SIGNIFICANCE_THRESHOLD
+            corrected_p_value = apply_fixed_family_size_correction_to_single_p_value(
+                raw_p_value, number_of_pairs_in_family, correction_method
+            )
+            significant = corrected_p_value < SIGNIFICANCE_THRESHOLD
             result_label = "**NON-INFERIOR ✓**" if significant else "inconclusive"
             interpretation = (
                 f"Loss within {delta:.3f}"
                 if significant
                 else f"Cannot confirm loss < {delta:.3f}"
             )
-            left_column_lines.append(
-                f"| {delta:.3f} | {statistic:.1f} | {p_value:.4f} | {result_label} | {interpretation} |"
-            )
+            if correction_method == "none":
+                left_column_lines.append(
+                    f"| {delta:.3f} | {statistic:.1f} | {raw_p_value:.4f} | {result_label} | {interpretation} |"
+                )
+            else:
+                left_column_lines.append(
+                    f"| {delta:.3f} | {statistic:.1f} | {raw_p_value:.4f} | {corrected_p_value:.4f} | {result_label} | {interpretation} |"
+                )
             if significant and first_significant_delta is None:
                 first_significant_delta = delta
+
+        if correction_method != "none":
+            left_column_lines.append("")
+            left_column_lines.append(
+                f"*Corrected p-value uses Bonferroni correction with a fixed family size of "
+                f"{number_of_pairs_in_family} (the number of hypothesis-vs-baseline pairs in this report), "
+                f"applied independently at every δ.*"
+            )
 
         left_column_lines.append("")
         if first_significant_delta is not None:
             left_column_lines.append(
-                f"> **Smallest δ confirmed: {first_significant_delta:.3f}**  "
+                f"> **Smallest δ confirmed: {first_significant_delta:.3f}**"
+                + (f" ({correction_method}-corrected)" if correction_method != "none" else "")
+                + "  "
             )
             left_column_lines.append(
                 f"> Non-inferior as long as a Dice loss up to {first_significant_delta:.3f} is acceptable."
@@ -754,6 +771,7 @@ def run_wilcoxon_analysis_for_all_pairs(
     # --- Apply the chosen correction once, across every pair's raw superiority p-value ---
     raw_superiority_p_values = [pair_data["raw_superiority_p_value"] for pair_data in collected_pair_data]
     corrected_superiority_p_values = apply_p_value_correction(raw_superiority_p_values, p_value_correction_method)
+    number_of_pairs_in_family = len(collected_pair_data)
 
     # --- Pass 2: build the report, in the original comparison_pairs order ---
     report_lines = []
@@ -775,7 +793,7 @@ def run_wilcoxon_analysis_for_all_pairs(
     report_lines.append("---")
     report_lines.append("")
 
-    corrected_p_value_by_original_pair_index = {
+    corrected_superiority_p_value_by_original_pair_index = {
         pair_data["original_pair_index"]: corrected_p_value
         for pair_data, corrected_p_value in zip(collected_pair_data, corrected_superiority_p_values)
     }
@@ -790,7 +808,7 @@ def run_wilcoxon_analysis_for_all_pairs(
             continue
 
         pair_data = collected_pair_data_by_original_pair_index[original_pair_index]
-        corrected_p_value = corrected_p_value_by_original_pair_index[original_pair_index]
+        corrected_superiority_p_value = corrected_superiority_p_value_by_original_pair_index[original_pair_index]
 
         pair_report_lines = build_report_lines_for_pair(
             pair_data["baseline_label"],
@@ -802,7 +820,8 @@ def run_wilcoxon_analysis_for_all_pairs(
             pair_data["matched_dataset_names"],
             pair_data["skip_non_inferiority"],
             p_value_correction_method,
-            corrected_p_value,
+            corrected_superiority_p_value,
+            number_of_pairs_in_family,
         )
         report_lines.extend(pair_report_lines)
 
@@ -869,11 +888,11 @@ def parse_command_line_arguments():
     argument_parser.add_argument(
         "--p-value-correction",
         choices=P_VALUE_CORRECTION_METHODS,
-        default="none",
-        help="Multiple-comparisons correction applied to the superiority test's p-value, across every pair "
-             "in this report (default: none). 'bonferroni' and 'holm' control the family-wise error rate; "
-             "'fdr_bh' (Benjamini-Hochberg) controls the false discovery rate and is less conservative. "
-             "The raw, uncorrected p-value is always shown alongside the corrected one.",
+        default="bonferroni",
+        help="Multiple-comparisons correction applied to both the superiority test and the non-inferiority "
+             "sweep's p-values, across every hypothesis-vs-baseline pair in this report (default: bonferroni). "
+             "Pass 'none' to see only the raw, uncorrected p-values. The raw p-value is always shown "
+             "alongside the corrected one when correction is applied.",
     )
     return argument_parser.parse_args()
 
