@@ -7,6 +7,9 @@ import numpy as np
 from scipy.stats import wilcoxon
 
 
+P_VALUE_CORRECTION_METHODS = ["none", "bonferroni"]
+
+
 EXPERIMENTS_CSV_PATH = Path("experiments/experiments_large.csv")
 OUTPUT_REPORT_FOLDER = Path("results/significance_tests")
 SOURCE_OUTPUT_FOLDERS = {
@@ -478,6 +481,32 @@ def run_non_inferiority_wilcoxon_test_for_delta(baseline_dice_values, comparison
     return statistic, p_value
 
 
+def apply_bonferroni_correction(p_values):
+    number_of_tests = len(p_values)
+    return [min(p_value * number_of_tests, 1.0) for p_value in p_values]
+
+
+def apply_p_value_correction(p_values, correction_method):
+    if correction_method == "none":
+        return list(p_values)
+    if correction_method == "bonferroni":
+        return apply_bonferroni_correction(p_values)
+    raise ValueError(f"Unknown p-value correction method: {correction_method!r}. Choose from {P_VALUE_CORRECTION_METHODS}.")
+
+
+
+def apply_fixed_family_size_correction_to_single_p_value(p_value, number_of_pairs_in_family, correction_method):
+    """
+    Corrects ONE p-value (e.g. the non-inferiority p-value at one delta, for one hypothesis
+    pair) using a fixed family size of number_of_pairs_in_family, WITHOUT needing the other
+    p-values in that family: corrected_p = min(p * M, 1.0). This is the exact Bonferroni
+    correction, applied independently at every delta in the sweep.
+    """
+    if correction_method == "none":
+        return p_value
+    return min(p_value * number_of_pairs_in_family, 1.0)
+
+
 def build_report_lines_for_pair(
     baseline_label,
     comparison_label,
@@ -487,6 +516,9 @@ def build_report_lines_for_pair(
     comparison_parameter_counts,
     matched_dataset_names,
     skip_non_inferiority,
+    correction_method,
+    corrected_superiority_p_value,
+    number_of_pairs_in_family,
 ):
     dice_deltas = [
         comparison - baseline
@@ -513,6 +545,7 @@ def build_report_lines_for_pair(
         baseline_dice_values, comparison_dice_values
     )
     superiority_is_significant = superiority_p_value < SIGNIFICANCE_THRESHOLD
+    corrected_superiority_is_significant = corrected_superiority_p_value < SIGNIFICANCE_THRESHOLD
 
     left_column_lines = []
     left_column_lines.append("### Superiority Test")
@@ -520,10 +553,20 @@ def build_report_lines_for_pair(
     left_column_lines.append("*One-sided Wilcoxon signed-rank test (alternative: comparison > baseline)*")
     left_column_lines.append("")
     superiority_verdict = "**SIGNIFICANT ✓**" if superiority_is_significant else "not significant"
-    left_column_lines.append(f"| W | p-value | Result |")
-    left_column_lines.append(f"|---|---------|--------|")
-    left_column_lines.append(f"| {superiority_statistic:.1f} | {superiority_p_value:.4f} | {superiority_verdict} |")
+    if correction_method == "none":
+        left_column_lines.append(f"| W | p-value | Result |")
+        left_column_lines.append(f"|---|---------|--------|")
+        left_column_lines.append(f"| {superiority_statistic:.1f} | {superiority_p_value:.4f} | {superiority_verdict} |")
+    else:
+        corrected_verdict = "**SIGNIFICANT ✓**" if corrected_superiority_is_significant else "not significant"
+        left_column_lines.append(f"| W | Raw p-value | Raw Result | Corrected p-value ({correction_method}) | Corrected Result |")
+        left_column_lines.append(f"|---|-------------|------------|--------------------------------------|-------------------|")
+        left_column_lines.append(
+            f"| {superiority_statistic:.1f} | {superiority_p_value:.4f} | {superiority_verdict} | "
+            f"{corrected_superiority_p_value:.4f} | {corrected_verdict} |"
+        )
     left_column_lines.append("")
+
 
     if superiority_is_significant:
         left_column_lines.append(
@@ -548,31 +591,53 @@ def build_report_lines_for_pair(
             "within tolerance δ.*"
         )
         left_column_lines.append("")
-        left_column_lines.append("| δ | W | p-value | Result | Interpretation |")
-        left_column_lines.append("|---|---|---------|--------|----------------|")
+        if correction_method == "none":
+            left_column_lines.append("| δ | W | p-value | Result | Interpretation |")
+            left_column_lines.append("|---|---|---------|--------|----------------|")
+        else:
+            left_column_lines.append(f"| δ | W | Raw p-value | Corrected p-value ({correction_method}) | Result | Interpretation |")
+            left_column_lines.append("|---|---|-------------|---------------------------------------|--------|----------------|")
 
         first_significant_delta = None
         for delta in DELTA_VALUES_TO_TEST:
-            statistic, p_value = run_non_inferiority_wilcoxon_test_for_delta(
+            statistic, raw_p_value = run_non_inferiority_wilcoxon_test_for_delta(
                 baseline_dice_values, comparison_dice_values, delta
             )
-            significant = p_value < SIGNIFICANCE_THRESHOLD
+            corrected_p_value = apply_fixed_family_size_correction_to_single_p_value(
+                raw_p_value, number_of_pairs_in_family, correction_method
+            )
+            significant = corrected_p_value < SIGNIFICANCE_THRESHOLD
             result_label = "**NON-INFERIOR ✓**" if significant else "inconclusive"
             interpretation = (
                 f"Loss within {delta:.3f}"
                 if significant
                 else f"Cannot confirm loss < {delta:.3f}"
             )
-            left_column_lines.append(
-                f"| {delta:.3f} | {statistic:.1f} | {p_value:.4f} | {result_label} | {interpretation} |"
-            )
+            if correction_method == "none":
+                left_column_lines.append(
+                    f"| {delta:.3f} | {statistic:.1f} | {raw_p_value:.4f} | {result_label} | {interpretation} |"
+                )
+            else:
+                left_column_lines.append(
+                    f"| {delta:.3f} | {statistic:.1f} | {raw_p_value:.4f} | {corrected_p_value:.4f} | {result_label} | {interpretation} |"
+                )
             if significant and first_significant_delta is None:
                 first_significant_delta = delta
+
+        if correction_method != "none":
+            left_column_lines.append("")
+            left_column_lines.append(
+                f"*Corrected p-value uses Bonferroni correction with a fixed family size of "
+                f"{number_of_pairs_in_family} (the number of hypothesis-vs-baseline pairs in this report), "
+                f"applied independently at every δ.*"
+            )
 
         left_column_lines.append("")
         if first_significant_delta is not None:
             left_column_lines.append(
-                f"> **Smallest δ confirmed: {first_significant_delta:.3f}**  "
+                f"> **Smallest δ confirmed: {first_significant_delta:.3f}**"
+                + (f" ({correction_method}-corrected)" if correction_method != "none" else "")
+                + "  "
             )
             left_column_lines.append(
                 f"> Non-inferior as long as a Dice loss up to {first_significant_delta:.3f} is acceptable."
@@ -635,6 +700,7 @@ def run_wilcoxon_analysis_for_all_pairs(
     comparison_pairs,
     output_report_folder,
     source,
+    p_value_correction_method="none",
 ):
     output_report_folder.mkdir(parents=True, exist_ok=True)
 
@@ -647,19 +713,11 @@ def run_wilcoxon_analysis_for_all_pairs(
         experiment_rows_sorted_by_run_id
     )
 
-    report_lines = []
-    report_lines.append("# Wilcoxon Statistical Test Report")
-    report_lines.append("")
-    report_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    report_lines.append("")
-    report_lines.append(f"Datasets: {len(dataset_names)}")
-    report_lines.append(f"Significance threshold: α = {SIGNIFICANCE_THRESHOLD}")
-    report_lines.append(f"Non-inferiority δ range: {DELTA_VALUES_TO_TEST[0]:.3f} – {DELTA_VALUES_TO_TEST[-1]:.3f}")
-    report_lines.append("")
-    report_lines.append("---")
-    report_lines.append("")
+    # --- Pass 1: collect data and raw superiority p-values for every valid pair ---
+    collected_pair_data = []
+    skipped_pair_report_sections = {}
 
-    for pair in comparison_pairs:
+    for original_pair_index, pair in enumerate(comparison_pairs):
         baseline_hypothesis_text = pair["baseline_hypothesis"]
         comparison_hypothesis_text = pair["comparison_hypothesis"]
         baseline_label = pair["baseline_label"]
@@ -683,23 +741,87 @@ def run_wilcoxon_analysis_for_all_pairs(
 
         if len(matched_dataset_names) < 2:
             print(f"  WARNING: Only {len(matched_dataset_names)} datasets matched. Skipping.")
-            report_lines.append(f"## {comparison_label} vs. {baseline_label}")
-            report_lines.append("")
-            report_lines.append(f"> WARNING: Only {len(matched_dataset_names)} datasets matched. Test skipped.")
-            report_lines.append("")
-            report_lines.append("---")
-            report_lines.append("")
+            skipped_pair_report_sections[original_pair_index] = [
+                f"## {comparison_label} vs. {baseline_label}",
+                "",
+                f"> WARNING: Only {len(matched_dataset_names)} datasets matched. Test skipped.",
+                "",
+                "---",
+                "",
+            ]
             continue
 
+        _, raw_superiority_p_value, _ = run_one_sided_wilcoxon_superiority_test(
+            baseline_dice_values, comparison_dice_values
+        )
+
+        collected_pair_data.append({
+            "original_pair_index": original_pair_index,
+            "baseline_label": baseline_label,
+            "comparison_label": comparison_label,
+            "baseline_dice_values": baseline_dice_values,
+            "comparison_dice_values": comparison_dice_values,
+            "baseline_parameter_counts": baseline_parameter_counts,
+            "comparison_parameter_counts": comparison_parameter_counts,
+            "matched_dataset_names": matched_dataset_names,
+            "skip_non_inferiority": skip_non_inferiority,
+            "raw_superiority_p_value": raw_superiority_p_value,
+        })
+
+    # --- Apply the chosen correction once, across every pair's raw superiority p-value ---
+    raw_superiority_p_values = [pair_data["raw_superiority_p_value"] for pair_data in collected_pair_data]
+    corrected_superiority_p_values = apply_p_value_correction(raw_superiority_p_values, p_value_correction_method)
+    number_of_pairs_in_family = len(collected_pair_data)
+
+    # --- Pass 2: build the report, in the original comparison_pairs order ---
+    report_lines = []
+    report_lines.append("# Wilcoxon Statistical Test Report")
+    report_lines.append("")
+    report_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report_lines.append("")
+    report_lines.append(f"Datasets: {len(dataset_names)}")
+    report_lines.append(f"Significance threshold: α = {SIGNIFICANCE_THRESHOLD}")
+    report_lines.append(f"Non-inferiority δ range: {DELTA_VALUES_TO_TEST[0]:.3f} – {DELTA_VALUES_TO_TEST[-1]:.3f}")
+    if p_value_correction_method == "none":
+        report_lines.append("P-value correction: none (each superiority test reported at its raw, uncorrected p-value)")
+    else:
+        report_lines.append(
+            f"P-value correction: {p_value_correction_method} "
+            f"(applied once across all {len(collected_pair_data)} superiority tests in this report)"
+        )
+    report_lines.append("")
+    report_lines.append("---")
+    report_lines.append("")
+
+    corrected_superiority_p_value_by_original_pair_index = {
+        pair_data["original_pair_index"]: corrected_p_value
+        for pair_data, corrected_p_value in zip(collected_pair_data, corrected_superiority_p_values)
+    }
+    collected_pair_data_by_original_pair_index = {
+        pair_data["original_pair_index"]: pair_data
+        for pair_data in collected_pair_data
+    }
+
+    for original_pair_index in range(len(comparison_pairs)):
+        if original_pair_index in skipped_pair_report_sections:
+            report_lines.extend(skipped_pair_report_sections[original_pair_index])
+            continue
+
+        pair_data = collected_pair_data_by_original_pair_index[original_pair_index]
+        corrected_superiority_p_value = corrected_superiority_p_value_by_original_pair_index[original_pair_index]
+
         pair_report_lines = build_report_lines_for_pair(
-            baseline_label,
-            comparison_label,
-            baseline_dice_values,
-            comparison_dice_values,
-            baseline_parameter_counts,
-            comparison_parameter_counts,
-            matched_dataset_names,
-            skip_non_inferiority,
+            pair_data["baseline_label"],
+            pair_data["comparison_label"],
+            pair_data["baseline_dice_values"],
+            pair_data["comparison_dice_values"],
+            pair_data["baseline_parameter_counts"],
+            pair_data["comparison_parameter_counts"],
+            pair_data["matched_dataset_names"],
+            pair_data["skip_non_inferiority"],
+            p_value_correction_method,
+            corrected_superiority_p_value,
+            number_of_pairs_in_family,
         )
         report_lines.extend(pair_report_lines)
 
@@ -763,6 +885,15 @@ def parse_command_line_arguments():
         help="Path to the results CSV. Defaults to experiments/experiments_large.csv for --source validation, "
              "or experiments/evaluations.csv for --source test.",
     )
+    argument_parser.add_argument(
+        "--p-value-correction",
+        choices=P_VALUE_CORRECTION_METHODS,
+        default="bonferroni",
+        help="Multiple-comparisons correction applied to both the superiority test and the non-inferiority "
+             "sweep's p-values, across every hypothesis-vs-baseline pair in this report (default: bonferroni). "
+             "Pass 'none' to see only the raw, uncorrected p-values. The raw p-value is always shown "
+             "alongside the corrected one when correction is applied.",
+    )
     return argument_parser.parse_args()
 
 
@@ -797,4 +928,5 @@ if __name__ == "__main__":
         comparison_pairs=pairs_to_run,
         output_report_folder=output_report_folder,
         source=arguments.source,
+        p_value_correction_method=arguments.p_value_correction,
     )
