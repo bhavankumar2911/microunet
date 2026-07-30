@@ -24,3 +24,5 @@ slrum-commands.txt
 mlruns
 hpc
 helper_scripts
+
+!reproduce/hpc/
