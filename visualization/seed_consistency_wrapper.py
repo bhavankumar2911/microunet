@@ -12,6 +12,13 @@ OUTPUT_BASE_FOLDER = Path("ablation/std")
 
 ABLATIONS_TO_PLOT = [
     {
+        "baseline_hypothesis": "No hypothesis - instance normalization.",
+        "baseline_label": "Naive Baseline",
+        "comparison_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
+        "comparison_label": "Stable Baseline",
+        "output_file": OUTPUT_BASE_FOLDER / "naive_baseline" / "naive_baseline_vs_stable_baseline.png",
+    },
+    {
         "baseline_hypothesis": "Stable Baseline (Instance norm + Kaiming normal)",
         "baseline_label": "Stable Baseline",
         "comparison_hypothesis": "Depth-wise separable layers (8-16-32) with three convolutions per block does not lose much in Dice.",
